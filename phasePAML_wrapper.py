@@ -7,6 +7,7 @@ import getopt
 import datetime
 import os
 import os.path
+from helpers.fastahelper import FastaParser
 
 
 def usage():
@@ -57,11 +58,25 @@ def show_help():
     #
     #
     #############################################
-    Please note that pep and nuc ids for each sequence pair needs to match exactly!
+    Please note that pep and nuc ids for each sequence pair need to match exactly!
     """
     print(text)
     sys.exit(0)
 
+def show_phase_help():
+    #TODO detailed phase description with dependencies
+    text = """
+    ##################################################################
+    # phase         description      dependencies
+    # 0             from scratch     valid pep and nuc files
+    # 1             MSA              prank
+    # 2             nucMSA           pal2nal
+    # 3             tree             RAxML
+    # 4             tree labeling    ete2
+    # 5             select.analysis  codeml (PAML)
+    # 6             summarize        result from phase 4 for all files
+    ###################################################################
+    """
 
 def show_model_help():
     text = """
@@ -102,16 +117,44 @@ def check_input(dir):
         if e in dirlist:
             fastanames = set([".".join(name.split('.')[0:-1]) for name in os.listdir(e)])
             files_dct[e] = fastanames
-            print(fastanames)
             if tmp and tmp != fastanames:
                 raise FastaFilesDoNotMatchException("Fasta files in the "
                                                             "provided directories "
                                                             "do not match.\n")
             else:
                 tmp = fastanames
-    else:
 
-        print("\t ok.\n")
+def check_fasta(dir):
+    expected = [os.path.join(dir, "nuc"), os.path.join(dir, "pep")]
+    d = os.path.join(dir)
+    dirlist = [os.path.join(d, o) for o in os.listdir(d) if os.path.isdir(os.path.join(d, o))]
+    files_dct = {}
+    tmp = None
+    files_dct = {}
+    files_full_dct = {}
+    for e in expected:
+        if e in dirlist:
+            full_fastanames = [name for name in os.listdir(e)]
+            fastanames = set([".".join(name.split('.')[0:-1]) for name in os.listdir(e)])
+            files_dct[e] = fastanames
+            files_full_dct[e] = full_fastanames
+            print(fastanames, full_fastanames)
+            if tmp and tmp != fastanames:
+                raise FastaFilesDoNotMatchException("Fasta files in the "
+                                                            "provided directories "
+                                                            "do not match.\n")
+            else:
+                tmp = fastanames
+
+    fpp = FastaParser()
+    fpn = FastaParser()
+    #for k, s in files_full_dct.items():
+    #    print(s, "S")
+    #nucs = fpn.read_fasta(os.path.join(expected[0],s[0]))
+    #peps = fpp.read_fasta(os.path.join(expected[1],s[0]))
+    for i,j in zip(nucs, peps):
+        print(len(i[1]),len(j[1]))
+
 
 
 def main():
@@ -187,7 +230,7 @@ def main():
         print("No output directory.\n")
         usage()
     if not name:
-        "{:%B_%d_%Y_%H%M}".format(datetime.datetime.now())
+        name = "{:%B_%d_%Y_%H%M}".format(datetime.datetime.now())
     if not num_bootstraps:
         num_bootstraps = 100
     if not regex:
@@ -204,8 +247,68 @@ def main():
     if not num_cores:
         num_cores = 1
 
-    check_input(input_dir)
 
+    ###################
+    #todo sanity check:
+    #prank
+    #mafft
+    #raxml
+    #pal2nal
+    #codeml
+    ################### raise Warning, but offer to continue [y,N]V
+
+    #todo if phase == 0, check source dir, otherwise check rundirs!
+    #validate input folder, pep and nuc files need to match
+    if phase == 0:
+        try:
+            check_input(input_dir)
+        except FastaFilesDoNotMatchException as e:
+            print(e)
+            sys.exit(1)
+        check_fasta(dir=input_dir)
+        try:
+            make_folder_skeleton(output_dir=output_dir, name=name)
+        except DirectoryExistsException as e:
+            print(e)
+            sys.exit(1)
+
+
+
+
+    #check for non-matching headers within the pep and nuc files,
+    #  raise HeaderNotMatchingException
+    #check for len(nuc) !=len(pep)/3,
+    # raise LengthNotMatchingException
+    #todo check_fasta(input_dir)
+    #
+    #now fasta files should be fine to work with
+    #todo create database run table/check for completed phases of same name,
+    # raise OverwriteRunException if started with phase below completed phases
+    #catch OverwriteRunException :"{} has completed phase n, but you want to start phase m<n.
+    # Are you sure you want to overwrite phases x,yz [y,N]?"
+    # if overwrite: drop rows from table
+    #
+
+
+class DirectoryExistsException(Exception):
+    pass
+
+def make_folder_skeleton(output_dir, name):
+    base_path = os.path.join(output_dir,name)
+    phase_0 = base_path
+    phase_1 = os.path.join(base_path, "MSA_pep")
+    phase_2 = os.path.join(base_path, "MSA_nuc")
+    phase_3 = os.path.join(base_path, "tree")
+    phase_4 = os.path.join(base_path, "tree_lab")
+    phase_5 = os.path.join(base_path, "codeml")
+    phase_6 = os.path.join(base_path, "results")
+    if not os.path.exists(base_path):
+        os.makedirs(base_path)
+        for i in [phase_1, phase_2, phase_3, phase_4, phase_5, phase_6]:
+            os.makedirs(i)
+    else:
+        raise DirectoryExistsException("{} already exists.".format(base_path))
 
 if __name__ == "__main__":
     main()
+#todo add fastaparser
