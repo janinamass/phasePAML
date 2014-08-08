@@ -22,7 +22,7 @@ def db_check_run(db, run_name, orthogroup_dct):
             res = cur.fetchall()
         if len(res) > 0:
             print("Run {} already exists.\n".format(run_name))
-            check_phase(run_name)
+            check_phase(cur, run_name)
     else:
         print("Creating new db file {}.\n".format(db))
         cmd = 'CREATE TABLE run (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);'
@@ -51,29 +51,58 @@ def db_check_run(db, run_name, orthogroup_dct):
 
 
 def init_phasetable(connection, run_id, orthogroup_list):
-    phase = 0
     cmd = 'CREATE TABLE phase (' \
           'id INTEGER PRIMARY KEY AUTOINCREMENT, ' \
           'run_id INTEGER, ' \
           'phase INTEGER, ' \
           'orthogroup TEXT, ' \
+          'status TEXT, ' \
+          'timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,' \
           'FOREIGN KEY(run_id) REFERENCES run(id), ' \
           'FOREIGN KEY(orthogroup) REFERENCES orthoinfo(orthogroup)' \
           ');'
     cur = connection.cursor()
     cur.execute(cmd)
     print("phase table created.\n")
-    cmdf = lambda runid, orthgroup: \
-        'INSERT INTO phase(run_id, phase, orthogroup)' \
-        ' VALUES ({},{},{})'.format(runid, phase, orthgroup)
+    #status
+    # f: failed
+    # r: running
+    # s: success
+    cmdf = lambda runid, phase, orthogroup, status : \
+        'INSERT INTO phase(run_id, phase, orthogroup, status)' \
+        ' VALUES ({},{},{},{})'.format(runid, phase, orthogroup, status)
 
+    phase = 0
     for o in orthogroup_list:
-        o = q(o)
-
-        cmd = cmdf(run_id, o)
+        cmd = cmdf(run_id, phase, q(o), q("s"))
         print(cmd, "CMD")
         print(cmd)
         cur.execute(cmd)
+
+
+def update_phasetable(db, run_id, orthogroup_id, phase, status):
+    #todo test
+    # update might be misleading, just insert another line for the current step
+    #status
+    # f: failed
+    # r: running
+    # s: success
+    con = sqlite3.connect(db)
+    with con:
+        cur = con.cursor()
+        cmdf = lambda runid, phase, orthogroup_id, status : \
+            'INSERT INTO phase(run_id, phase, orthogroup, status)' \
+            ' VALUES ({},{},{},{})'.format(runid, phase, orthogroup_id, status)
+
+        cmd = cmdf(run_id, phase, q(orthogroup_id), q(status))
+        print(cmd, "CMD")
+        cur.execute(cmd)
+        con.commit()
+
+
+
+
+
 
 
 def init_orthoinfotable(connection, run_id, orthogroup_dct):
@@ -86,14 +115,26 @@ def init_orthoinfotable(connection, run_id, orthogroup_dct):
           ');'
     cur = connection.cursor()
     cur.execute(cmd)
-    print("phase table created.\n")
+    print("orthoinfo table created.\n")
     connection.commit()
     cmdf = lambda runid, orthgroup, headers: \
         'INSERT INTO orthoinfo(run_id, orthogroup, headers)' \
         ' VALUES ({},{},{})'.format(runid, orthgroup, headers)
 
     for o in orthogroup_dct:
-        qo = q(o)  # orthogroup_name
+        print(o,"OO")
+        qo = q(o)  # orthogroup_n   ame
         cmd = cmdf(run_id, qo, q(",".join(orthogroup_dct[o])))
         print(cmd)
         cur.execute(cmd)
+
+
+def db_get_run_id(db, run_name):
+    con = sqlite3.connect(db)
+    with con:
+        cur = con.cursor()
+        cmd = "SELECT id FROM run WHERE name = {};".format(q(run_name))
+        print(cmd)
+        cur.execute(cmd)
+        run_ids = cur.fetchall()
+    return run_ids
