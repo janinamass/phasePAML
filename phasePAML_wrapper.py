@@ -12,7 +12,8 @@ import shutil
 from helpers.fastahelper import FastaParser
 from helpers.dbhelper import db_check_run
 from helpers.dbhelper import db_get_run_id
-from helpers.wrappers import run_prank, run_pal2nal
+from helpers.wrappers import run_prank, run_pal2nal, run_raxml
+
 
 class DirectoryExistsException(Exception):
     pass
@@ -383,7 +384,7 @@ def main():
         for nuc_fa, pep_msa in nuc_msa_dct.items():
             orthogroup = os.path.basename(pep_msa).split(".")[0]
             #produces .pamlg, .paml
-            run_pal2nal(pep_msa=pep_msa, nuc_fa = nuc_fa,
+            run_pal2nal(pep_msa=pep_msa, nuc_fa=nuc_fa,
                         outfile=os.path.join(path_dct["MSA_nuc"],
                                              orthogroup),
                         cpu=1,
@@ -392,6 +393,21 @@ def main():
                         orthogroup=orthogroup,
                         run_id=run_id,
                         phase=2)
+        # copy .paml files to codeml dir
+        for pamlfile in os.listdir(path_dct["MSA_nuc"]):
+            if pamlfile.endswith(".paml"):
+                shutil.copy(os.path.join(path_dct["MSA_nuc"], pamlfile), os.path.join(path_dct["codeml"], pamlfile))
+        phase = 3 #raxml
+    if phase == 3:
+        for pep_msa in os.listdir(path_dct["MSA_pep"]):
+            if pep_msa.endswith(".msa"):
+                orthogroup = os.path.basename(pep_msa).split(".")[0]
+                #todo raxml model, for now always PROTGAMMAJTT
+                run_raxml(pep_msa=os.path.join(path_dct["MSA_pep"], pep_msa), outdir=path_dct['tree'],
+                          num_bootstraps=5, db=DB, model="PROTGAMMAJTT",
+                          orthogroup=orthogroup, run_id=run_id,
+                          phase=phase, workdir=os.path.abspath(path_dct["tree"]))
+
 
 
 
