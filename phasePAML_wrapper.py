@@ -232,7 +232,7 @@ def main():
     phase = None
     num_cores = None
     no_copy = False
-
+    #todo rm no_copy option
     try:
         opts, args = getopt.gnu_getopt(
             sys.argv[1:],
@@ -407,6 +407,14 @@ def main():
                           num_bootstraps=5, db=DB, model="PROTGAMMAJTT",
                           orthogroup=orthogroup, run_id=run_id,
                           phase=phase, workdir=os.path.abspath(path_dct["tree"]))
+        phase = 4
+
+    if phase == 4:
+        #copy majority rule consensus trees to tree_lab folder
+        for mrc in os.listdir(path_dct["tree"]):
+            if mrc.endswith(".mrc") and mrc.startswith("RAxML_MajorityRuleConsensusTree."):
+                new_name = mrc.split("RAxML_MajorityRuleConsensusTree.")[1]
+                shutil.copy(os.path.join(path_dct["tree"], mrc), os.path.join(path_dct["tree_lab"], new_name))
 
 
 
