@@ -535,12 +535,11 @@ def main():
             if regex:
                 res = labelForPamlRegex(unlabelledTree, regex, tree)
                 tolabel = res[1]
-                print(res,"RES")
+                print(res, "RES")
             if model and tree and alignment:
-                print()
                 #model is a list:
                 modellist = model.split(",")
-                modellist  = [m.strip() for m in modellist]
+                modellist = [m.strip() for m in modellist]
                 #tag trees and return their filenames
                 if tolabel:
                     tolabel = [l.strip() for l in tolabel]

@@ -178,3 +178,9 @@ def run_ctl_maker(paml_file=None, tree_file=None,model="Ah0,Ah1",outfile=None,
 #generateCtl(model=model, treefile = t, seqfile=alignment, outfile=None, generateOther = writeOther)
 
 #needs python-qt4
+
+@db_logger
+def run_codeml(ctl_file=None, db=None,
+                orthogroup=None, run_id=None,
+                phase=None):
+    pass
