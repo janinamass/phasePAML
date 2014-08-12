@@ -6,6 +6,7 @@ import shutil
 import os
 from fastahelper import FastaParser
 from mfa2phy import mfa2phy
+from tree_labeler import make_ctl_tree
 
 class PipelineException(Exception):
     pass
@@ -69,13 +70,14 @@ def run_prank(infile=None, outfile=None,
 
 # phase 2 pal2nal
 def sort_fasta(nuc_fa=None, pep_msa=None, nuc_msa_out=None):
-    fpp = FastaParser().read_fasta(pep_msa)
-    nuc = {}
-    for i in FastaParser().read_fasta(nuc_fa):
-        nuc[i[0]] = i[1]
-    with open(nuc_msa_out, 'w') as o:
-        for f in fpp:
-            o.write(">{}\n{}\n".format(f[0], nuc[f[0]]))
+    if pep_msa.endswith(".msa"):
+        fpp = FastaParser().read_fasta(pep_msa)
+        nuc = {}
+        for i in FastaParser().read_fasta(nuc_fa):
+            nuc[i[0]] = i[1]
+        with open(nuc_msa_out, 'w') as o:
+            for f in fpp:
+                o.write(">{}\n{}\n".format(f[0], nuc[f[0]]))
 
 
 @db_logger
@@ -158,9 +160,21 @@ def run_raxml(pep_msa=None, outdir=None, model="PROTGAMMAJTT",
             #rename
             return retval
 
-def run_pamldir(paml_file=None, tree_file=None,
-                outdir=None, regex=None,
+@db_logger
+def run_ctl_maker(paml_file=None, tree_file=None,model="Ah0,Ah1",outfile=None,
+                regex=None, depth=4,
                 semaphore=None, db=None,
                 orthogroup=None, run_id=None,
                 phase=None):
-    pass
+    try:
+        make_ctl_tree(treefile=tree_file, paml_msa=paml_file, outfile=outfile, model=model, regex=regex, depth=depth)
+    except Exception as e:
+        print(e)
+        raise PipelineException
+    #todo unlabeled tree from tree_file
+#readtree
+#labelForPamlRegex(unlabelledTree, regex, tree)
+#labelForPaml(unlabelledTree,[n], tree))
+#generateCtl(model=model, treefile = t, seqfile=alignment, outfile=None, generateOther = writeOther)
+
+#needs python-qt4

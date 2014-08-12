@@ -12,7 +12,7 @@ import shutil
 from helpers.fastahelper import FastaParser
 from helpers.dbhelper import db_check_run
 from helpers.dbhelper import db_get_run_id
-from helpers.wrappers import run_prank, run_pal2nal, run_raxml
+from helpers.wrappers import run_prank, run_pal2nal, run_raxml, run_ctl_maker
 
 
 class DirectoryExistsException(Exception):
@@ -304,7 +304,7 @@ def main():
     if not labeling_level:
         labeling_level = 4
     if not models:
-        models = ["Ah1", "Ah0"]
+        models = "Ah1,Ah0"
     if phase is None:
         print("No phase.\n")
         usage()
@@ -414,11 +414,21 @@ def main():
         for mrc in os.listdir(path_dct["tree"]):
             if mrc.endswith(".mrc") and mrc.startswith("RAxML_MajorityRuleConsensusTree."):
                 new_name = mrc.split("RAxML_MajorityRuleConsensusTree.")[1]
-                shutil.copy(os.path.join(path_dct["tree"], mrc), os.path.join(path_dct["tree_lab"], new_name))
-
-
-
-
+                shutil.copy(os.path.join(path_dct["tree"], mrc), os.path.join(path_dct["codeml"], new_name))
+        #todo remove tree_lab folder
+        for mrc in os.listdir(path_dct["codeml"]):
+            if mrc.endswith(".mrc"):
+                orthogroup = mrc.split(".")[0]
+                pamlfile = os.path.join(path_dct["codeml"], orthogroup+".paml")
+                treefile =  os.path.join(path_dct["codeml"], orthogroup+".mrc")
+                print(orthogroup)
+                print(pamlfile, mrc)
+                print(regex)
+                run_ctl_maker(paml_file=pamlfile, tree_file=treefile, model=models,
+                              outfile=treefile, regex=regex,
+                              depth=4, semaphore=None, db=DB,
+                              orthogroup=orthogroup, run_id=run_id,
+                              phase=phase)
 
 
 
