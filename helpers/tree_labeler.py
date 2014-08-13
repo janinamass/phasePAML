@@ -88,7 +88,7 @@ method = 0 * 0: simultaneous; 1: one branch at a time
     template += fix_omega + omega
     template += stuff
 
-    return (template)
+    return template
 
 
 def generateCtl(model, treefile, seqfile, outfile, generateOther=False):
@@ -282,7 +282,8 @@ def rgb(c):
     return [int(x, 16) for x in split]
 
 
-def label_regex(unlabeled_tree, regex, outfile, depth=4):
+def label_regex(unlabeled_tree, regex, treefile, depth=4,
+                model_list=None, paml_msa=None, outfile=None):
     pattern = re.compile(regex)
     t = EvolTree(unlabeled_tree)
     marks = []
@@ -302,78 +303,6 @@ def label_regex(unlabeled_tree, regex, outfile, depth=4):
     for i in range(0, depth):
         nsFG.append(NodeStyle())
         nsFG[i]["size"] = 10
-        nsFG[i]["fgcolor"] = "blue"
-
-    isroot = True
-    for node in t.traverse():
-        node.set_style(nsBG)
-        if node.is_root():
-            print("root")
-            node.unroot()
-            node._support = None
-
-    for node in t.get_descendants():
-        node.add_face(TextFace(node.node_id), column=0)
-
-    # traverse and match
-    for node in t.traverse():
-        if re.match(pattern, node.name):
-            node.set_style(nsMatch)
-            n = node
-            try:
-                for i in range(0, depth):
-                    n = n.up
-                    n.set_style(nsFG[i])
-                    marks.append("#" + str(count))
-                    t.mark_tree([str(count)], marks=marks)
-                    #just label everything with #1
-                    print(t.write())
-
-                    tolabelreg.append(str(n.node_id))
-
-                    outfile = outfile + "." + "_".join([str(n.node_id)])
-                    with open(outfile, 'w') as out:
-                        out.write(t.write())
-                    outfiles.append(outfile)
-
-            except AttributeError:
-                pass
-
-            marks.append("#" + str(count))
-            print(count)
-            t.mark_tree([str(count)], marks=marks)
-            #just label everything with #1
-            print(t.write())
-
-            outfile = tree + "." + "_".join([str(node.node_id)])
-            with open(outfile, 'w') as out:
-                out.write(t.write())
-                outfiles.append(outfile)
-    #t.show()
-    t.render(tree + ".png", tree_style=ts)
-    return (outfiles, tolabelreg)
-
-
-def label_regex(unlabeled_tree, regex, treefile, depth=4, model_list=None, paml_msa=None, outfile=None):
-    pattern = re.compile(regex)
-    t = EvolTree(unlabeled_tree)
-    marks = []
-    count = 1
-    outfiles = []
-    ts = TreeStyle()
-    ts.mode = "c"
-    nsMatch = NodeStyle()  # match
-    nsMatch["fgcolor"] = "blue"
-    nsMatch["size"] = 8
-    nsBG = NodeStyle()
-    nsBG["fgcolor"] = "black"
-    nsBG["size"] = 0
-    nsFG = []
-
-    tolabelreg = []
-    for i in range(0, depth):
-        nsFG.append(NodeStyle())
-        nsFG[i]["size"] = 8
         nsFG[i]["fgcolor"] = "blue"
 
     #isroot = True
@@ -410,10 +339,14 @@ def label_regex(unlabeled_tree, regex, treefile, depth=4, model_list=None, paml_
 
             except AttributeError:
                 pass
+        else:
+            node.set_style(nsBG)
     for f in tolabelreg:
         for m in model_list:
             generateCtl(model=m, treefile=treefile+"."+f, seqfile=paml_msa, outfile=outfile,
                                             generateOther=False)
+
+    t = fakeUnroot(t)
     t.render(treefile+".png", tree_style=ts)
     return outfiles, tolabelreg
 
