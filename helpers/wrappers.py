@@ -8,6 +8,7 @@ from fastahelper import FastaParser
 from mfa2phy import mfa2phy
 from tree_labeler import make_ctl_tree
 
+
 class PipelineException(Exception):
     pass
 
@@ -20,13 +21,15 @@ def db_logger(f):
     def wrapper(*args, **kwargs):
         db = kwargs.get("db")
         run_id = kwargs.get("run_id")
+        if not run_id:
+            run_id = "NULL"
         phase = kwargs.get("phase")
         status = "r"
         orthogroup = kwargs.get("orthogroup")
         connection = sqlite3.connect(db)
         with connection:
             cur = connection.cursor()
-            cmd = 'INSERT INTO phase (orthogroup, phase, status) VALUES ({},{},{})'.format(q(orthogroup), phase,
+            cmd = 'INSERT INTO phase (run_id, orthogroup, phase, status) VALUES ({},{},{},{})'.format(run_id, q(orthogroup), phase,
                                                                                            q(status))
             print(cmd)
             cur.execute(cmd)
@@ -179,8 +182,32 @@ def run_ctl_maker(paml_file=None, tree_file=None,model="Ah0,Ah1",outfile=None,
 
 #needs python-qt4
 
+
 @db_logger
-def run_codeml(ctl_file=None, db=None,
-                orthogroup=None, run_id=None,
-                phase=None):
-    pass
+def run_codeml(ctl_file=None, work_dir=None,
+               db=None, orthogroup=None,
+               run_id=None, phase=None, semaphore=None):
+    codeml_call = 'codeml {}'.format(ctl_file)
+    orig_wd = os.getcwd()
+    os.chdir(os.path.abspath(work_dir))
+    p = subprocess.Popen(codeml_call,
+                             shell=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+    p_out, p_err = p.communicate()
+    print(p_out)
+    print(p_err)
+    retval = p.wait()
+    os.chdir(orig_wd)
+    if retval != 0:
+        raise PipelineException
+    else:
+        #rename
+        return retval
+
+
+#origWD = os.getcwd() # remember our original working directory
+#os.chdir(os.path.join(os.path.abspath(sys.path[0]), relPathToLaunch))
+#subprocess.POPEN("usr/bin/perl ./file1.pl")
+#[...]
+#os.chdir(origWD) # get back to our original working directory

@@ -12,7 +12,7 @@ import shutil
 from helpers.fastahelper import FastaParser
 from helpers.dbhelper import db_check_run
 from helpers.dbhelper import db_get_run_id
-from helpers.wrappers import run_prank, run_pal2nal, run_raxml, run_ctl_maker
+from helpers.wrappers import run_prank, run_pal2nal, run_raxml, run_ctl_maker, run_codeml
 
 
 class DirectoryExistsException(Exception):
@@ -410,7 +410,6 @@ def main():
         phase = 4
 
     if phase == 4:
-        #copy majority rule consensus trees to tree_lab folder
         for mrc in os.listdir(path_dct["tree"]):
             if mrc.endswith(".mrc") and mrc.startswith("RAxML_MajorityRuleConsensusTree."):
                 new_name = mrc.split("RAxML_MajorityRuleConsensusTree.")[1]
@@ -420,16 +419,25 @@ def main():
             if mrc.endswith(".mrc"):
                 orthogroup = mrc.split(".")[0]
                 pamlfile = os.path.join(path_dct["codeml"], orthogroup+".paml")
-                treefile =  os.path.join(path_dct["codeml"], orthogroup+".mrc")
+                treefile = os.path.join(path_dct["codeml"], orthogroup+".mrc")
                 print(orthogroup)
                 print(pamlfile, mrc)
                 print(regex)
+                #todo unroot
                 run_ctl_maker(paml_file=pamlfile, tree_file=treefile, model=models,
                               outfile=treefile, regex=regex,
                               depth=4, semaphore=None, db=DB,
                               orthogroup=orthogroup, run_id=run_id,
                               phase=phase)
-
+        phase = 5
+    if phase == 5:
+        for ctl in os.listdir(path_dct["codeml"]):
+            workdir = path_dct["codeml"]
+            orthogroup = ctl.split(".")[0]
+            run_codeml(ctl_file=ctl, work_dir=workdir,
+                       db=DB, orthogroup=orthogroup,
+                       run_id=run_id, phase=phase,
+                       semaphore=None)
 
 
     # raise OverwriteRunException if started with phase below completed phases
@@ -437,7 +445,6 @@ def main():
     # Are you sure you want to overwrite phases x,yz [y,N]?"
     # if overwrite: drop rows from table
     #
-
 
 if __name__ == "__main__":
     main()
