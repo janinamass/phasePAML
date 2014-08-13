@@ -12,7 +12,7 @@ import shutil
 from helpers.fastahelper import FastaParser
 from helpers.dbhelper import db_check_run
 from helpers.dbhelper import db_get_run_id
-from helpers.wrappers import run_prank, run_pal2nal, run_raxml, run_ctl_maker, run_codeml
+from helpers.wrappers import run_prank, run_pal2nal, run_raxml, run_ctl_maker, run_codeml, run_pysickle
 
 
 class DirectoryExistsException(Exception):
@@ -221,14 +221,17 @@ def make_folder_skeleton(output_dir, name):
         raise DirectoryExistsException("{} already exists.".format(base_path))
 
 
-def is_min_length_paml_msa(paml_msa=None, min_length=100):
+def is_min_length_paml_msa(paml_msa=None, min_length=None):
     with open(paml_msa,'r') as paml:
         line = paml.readline().strip().split(" ")
         line = [l for l in line if l.strip() != ""]
-        alignment_length = line[1]
+        alignment_length = int(line[1])
+        print("ALIGNMENT LENGTH is {}, min length".format(alignment_length, min_length))
     if alignment_length >= min_length:
+        print("true")
         return True
     else:
+        print("false")
         return False
 
 
@@ -350,7 +353,6 @@ def main():
             #sys.exit(1)
         copy_files_to_workdir(input_dir=os.path.join(input_dir, "nuc"), output_dir=path_dct["nuc"])
         copy_files_to_workdir(input_dir=os.path.join(input_dir, "pep"), output_dir=path_dct["pep"])
-        print(orthogroup_dct, "OGD")
         print(db_check_run(os.path.join(output_dir, DB), run_name=name, orthogroup_dct=orthogroup_dct))
         phase = 1
     run_id = db_get_run_id(DB, run_name=name)
@@ -411,6 +413,40 @@ def main():
         for pamlfile in os.listdir(path_dct["MSA_nuc"]):
             if pamlfile.endswith(".paml"):
                 shutil.copy(os.path.join(path_dct["MSA_nuc"], pamlfile), os.path.join(path_dct["codeml"], pamlfile))
+                #check if the files are min length, copy pep msa file to pysickle if they're not
+                if not is_min_length_paml_msa(os.path.join(path_dct["MSA_nuc"], pamlfile), min_length=10000):
+                    print("NOT MINLEN")
+                    #todo fix qnd hack
+                    orthogroup = pamlfile.split(".")[0]
+                    shutil.copy(os.path.join(path_dct["MSA_pep"], orthogroup+".msa"), os.path.join(path_dct["pysickle"], orthogroup+".msa"))
+                    #todo rm next 2 lines
+                    nuc = [n for n in os.listdir(path_dct["nuc"]) if n.split(".")[0] == orthogroup][0]
+                    shutil.copy(os.path.join(path_dct["nuc"], nuc), os.path.join(path_dct["pysickle"], nuc))
+                    #todo if pysickle
+        pysickle=True
+        if pysickle:
+            print("running pysickle")
+            run_pysickle(dir=path_dct["pysickle"], db=DB,orthogroup="test",run_id=run_id,phase=9,semaphore=None)
+            for pysickled in os.listdir(os.path.join(path_dct["pysickle"], "ps_out_si")):
+                print(pysickled,"puc")
+                if pysickled.endswith(".tmp"):#marks new pep.fa
+                    print(pysickled)
+                    new_name = pysickled.replace(".", "_").replace("_tmp", ".fa")
+                    print(new_name, "new name", "infile:", os.path.join(path_dct["pysickle"],"ps_out_si", new_name))
+                    run_prank(infile=os.path.join(path_dct["pysickle"],"ps_out_si", pysickled),
+                              outfile= os.path.join(path_dct["MSA_pep"], new_name.split(".")[0]+".msa"),
+                              cpu=1, semaphore=None, db=DB,
+                              orthogroup=new_name.split(".")[0], run_id=run_id,
+                              phase=9)
+                    #nwo we still need the new nuc
+                    nucfa = [n for n in os.listdir(path_dct["nuc"]) if n.split(".")[0] == pysickled.split(".")[0]][0]
+                    print(nucfa,"NUCFA")
+                    orthogroup=new_name.split(".")[0]
+                    outfile = os.path.join(path_dct["MSA_nuc"], orthogroup+".msa")
+                    run_pal2nal(pep_msa=os.path.join(path_dct["MSA_pep"], new_name.split(".")[0]+".msa"),
+                                outfile=outfile, nuc_fa=os.path.join(path_dct["MSA_nuc"],nucfa), db=DB, phase=10,run_id=run_id,semaphore=None,orthogroup=orthogroup)
+            #todo merge back into main ...
+
         phase = 3 #raxml
     if phase == 3:
         for pep_msa in os.listdir(path_dct["MSA_pep"]):

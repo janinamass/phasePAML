@@ -96,7 +96,7 @@ def run_pal2nal(pep_msa=None, outfile=None,
     print("CALL pal2nal nuc: {} msa: {} out:{}", pal2nal_nuc_in, pep_msa, paml)
     print("CALL pal2nal nuc: {} msa: {} out:{}", pal2nal_nuc_in, pep_msa, pamlg)
 
-    p = subprocess.Popen('pal2nal.pl {} {} -output paml -nogap > {} '.format(pep_msa, nuc_fa, paml),
+    p = subprocess.Popen('pal2nal.pl {} {} -output paml -nogap > {} '.format(pep_msa, pal2nal_nuc_in, paml),
                          shell=True, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     p_out, p_err = p.communicate()
@@ -106,7 +106,7 @@ def run_pal2nal(pep_msa=None, outfile=None,
     if retval != 0:
         raise PipelineException
     else:
-        p = subprocess.Popen('pal2nal.pl {} {} -output paml > {} '.format(pep_msa, nuc_fa, pamlg),
+        p = subprocess.Popen('pal2nal.pl {} {} -output paml > {} '.format(pep_msa, pal2nal_nuc_in, pamlg),
                              shell=True, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         p_out, p_err = p.communicate()
@@ -207,7 +207,7 @@ def run_codeml(ctl_file=None, work_dir=None,
 
 
 @db_logger
-def run_pysickle(dir=None, suffix=".msa",
+def run_pysickle(dir=None, suffix=".msa",outdir=None,
                db=None, orthogroup=None,
                run_id=None, phase=None, semaphore=None):
     pysickle_call = 'pysickle.py -F {} -s {}'.format(dir, suffix)
