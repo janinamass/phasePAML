@@ -206,6 +206,23 @@ def run_codeml(ctl_file=None, work_dir=None,
         return retval
 
 
+@db_logger
+def run_pysickle(dir=None, suffix=".msa",
+               db=None, orthogroup=None,
+               run_id=None, phase=None, semaphore=None):
+    pysickle_call = 'pysickle.py -F {} -s {}'.format(dir, suffix)
+    p = subprocess.Popen(pysickle_call,
+                             shell=True,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+    p_out, p_err = p.communicate()
+    print(p_out)
+    print(p_err)
+    retval = p.wait()
+    if retval != 0:
+        raise PipelineException
+    else:
+        return retval
 #origWD = os.getcwd() # remember our original working directory
 #os.chdir(os.path.join(os.path.abspath(sys.path[0]), relPathToLaunch))
 #subprocess.POPEN("usr/bin/perl ./file1.pl")
