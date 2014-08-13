@@ -445,6 +445,8 @@ def main():
                     outfile = os.path.join(path_dct["MSA_nuc"], orthogroup+".msa")
                     run_pal2nal(pep_msa=os.path.join(path_dct["MSA_pep"], new_name.split(".")[0]+".msa"),
                                 outfile=outfile, nuc_fa=os.path.join(path_dct["MSA_nuc"],nucfa), db=DB, phase=10,run_id=run_id,semaphore=None,orthogroup=orthogroup)
+
+                    shutil.copy(outfile+".paml", os.path.join(path_dct["codeml"], orthogroup+".paml"))
             #todo merge back into main ...
 
         phase = 3 #raxml
