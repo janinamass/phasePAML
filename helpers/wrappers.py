@@ -101,7 +101,7 @@ def run_pal2nal(pep_msa=None, outfile=None,
                          stderr=subprocess.PIPE)
     p_out, p_err = p.communicate()
     #todo log errors
-    #print(p_out, p_err)
+    print(p_out, p_err)
     retval = p.wait()
     if retval != 0:
         raise PipelineException

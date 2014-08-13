@@ -191,12 +191,13 @@ def set_path_dct(output_dir, name):
     phase_1 = os.path.join(base_path, "MSA_pep")
     phase_2 = os.path.join(base_path, "MSA_nuc")
     phase_3 = os.path.join(base_path, "tree")
-    phase_4 = os.path.join(base_path, "tree_lab")
+    #phase_4 = os.path.join(base_path, "tree_lab")
     phase_5 = os.path.join(base_path, "codeml")
     phase_6 = os.path.join(base_path, "results")
+    pysickle = os.path.join(base_path, "pysickle")
     for i in [phase_0nuc, phase_0pep, phase_1,
-              phase_2, phase_3, phase_4, phase_5,
-              phase_6]:
+              phase_2, phase_3, phase_5,
+              phase_6,pysickle]:
         path_dct[os.path.basename(i)] = i
     return path_dct
 
@@ -208,15 +209,28 @@ def make_folder_skeleton(output_dir, name):
     phase_1 = os.path.join(base_path, "MSA_pep")
     phase_2 = os.path.join(base_path, "MSA_nuc")
     phase_3 = os.path.join(base_path, "tree")
-    phase_4 = os.path.join(base_path, "tree_lab")
+    #phase_4 = os.path.join(base_path, "tree_lab")
     phase_5 = os.path.join(base_path, "codeml")
     phase_6 = os.path.join(base_path, "results")
+    pysickle = os.path.join(base_path, "pysickle")
     if not os.path.exists(base_path):
         os.makedirs(base_path)
-        for i in [phase_0nuc, phase_0pep, phase_1, phase_2, phase_3, phase_4, phase_5, phase_6]:
+        for i in [phase_0nuc, phase_0pep, phase_1, phase_2, phase_3, phase_5, phase_6, pysickle]:
             os.makedirs(i)
     else:
         raise DirectoryExistsException("{} already exists.".format(base_path))
+
+
+def is_min_length_paml_msa(paml_msa=None, min_length=100):
+    with open(paml_msa,'r') as paml:
+        line = paml.readline().strip().split(" ")
+        line = [l for l in line if l.strip() != ""]
+        alignment_length = line[1]
+    if alignment_length >= min_length:
+        return True
+    else:
+        return False
+
 
 DB = "phasePAML.db"
 
@@ -432,12 +446,13 @@ def main():
         phase = 5
     if phase == 5:
         for ctl in os.listdir(path_dct["codeml"]):
-            workdir = path_dct["codeml"]
-            orthogroup = ctl.split(".")[0]
-            run_codeml(ctl_file=ctl, work_dir=workdir,
-                       db=DB, orthogroup=orthogroup,
-                       run_id=run_id, phase=phase,
-                       semaphore=None)
+            if ctl.endswith(".ctl"):
+                workdir = path_dct["codeml"]
+                orthogroup = ctl.split(".")[0]
+                run_codeml(ctl_file=ctl, work_dir=workdir,
+                           db=DB, orthogroup=orthogroup,
+                           run_id=run_id, phase=phase,
+                           semaphore=None)
 
 
     # raise OverwriteRunException if started with phase below completed phases
@@ -453,3 +468,5 @@ if __name__ == "__main__":
     #todo kick out corrupted fasta
     #todo enable resume
 
+#todo if paml < X, cp to pysickle
+#todo add pysickle to getopt: on length <x, always, never, default:never

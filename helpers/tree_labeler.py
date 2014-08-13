@@ -342,8 +342,9 @@ def label_regex(unlabeled_tree, regex, treefile, depth=4,
         else:
             node.set_style(nsBG)
     for f in tolabelreg:
+        print(f,"FFF")
         for m in model_list:
-            generateCtl(model=m, treefile=treefile+"."+f, seqfile=paml_msa, outfile=outfile,
+            generateCtl(model=m, treefile=treefile+"."+f, seqfile=paml_msa, outfile=treefile+"."+f,
                                             generateOther=False)
 
     t = fakeUnroot(t)
