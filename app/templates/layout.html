@@ -8,6 +8,15 @@
 
     <header>
       <div class="container">
+          <nav>
+        <ul class="menu">
+            <li><a href="{{ url_for('show_entries') }}">DB</a></li>
+            <li><a href="{{ url_for('show_running') }}">running</a></li>
+            <li><a href="{{ url_for('show_success') }}">success</a></li>
+            <li><a href="{{ url_for('show_failed') }}">failed</a></li>
+
+        </ul>
+        </nav>
         <h1 class="logo">phasePAML status</h1>
       </div>
     </header>

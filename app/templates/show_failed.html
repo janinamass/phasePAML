@@ -1,20 +1,8 @@
 {% extends "layout.html" %}
 {% block content %}
- <form action="{{ url_for('filter_subset') }}" method=post class=subset>
-      <dl>
-        <dt>run_id:
-        <dd><input type=text size=30 name=run_id>
-          <input type="radio" name="logic" value="and">AND
-          <input type="radio" name="logic" value="or">OR<br>
-          <dt>orthogroup:
-          <dd><input type=text size=30 name=orthogroup>
-        <dt><input type=submit value=filter>
-      </dl>
-    </form>
-
-<h1>Entries:</h1>
+<h1>Failed:</h1>
 <div class="jumbo">
-    <table border="0">
+    <table border="0" class="new">
         <tr>
             <th>run_id </th>
             <th>orthogroup</th>

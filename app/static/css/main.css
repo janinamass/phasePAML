@@ -5,8 +5,16 @@ body {
   color: #444;
 }
 
+table.new td, table.new tr{
+  border:0px #000 solid;
+  border-collapse:collapse;
+  text-align:left;
+  font-size : 100%;
+}
+
+
 /*
- * Create dark grey header with a white logo
+ * Create dark grey header with a logo
  */
 
 header {
@@ -20,13 +28,12 @@ header {
 header h1.logo {
   margin: 0;
   font-size: 1.7em;
-  color: #fff;
-  text-transform: uppercase;
+  color: #00FF00;
   float: left;
 }
 
 header h1.logo:hover {
-  color: #fff;
+  color: #00FF00;
   text-decoration: none;
 }
 
@@ -40,7 +47,7 @@ header h1.logo:hover {
 }
 
 div.jumbo {
-  padding: 10px 0 30px 0;
+  padding: 10px 0 10px 0;
   background-color: #eeeeee;
   -webkit-border-radius: 6px;
      -moz-border-radius: 6px;
@@ -57,8 +64,34 @@ h2 {
 h3 {
   font-size: 1.7em;
   font-weight: 100;
-  margin-top: 30px;
+  margin-top: 10px;
   text-align: center;
   letter-spacing: -1px;
   color: #999;
+}
+
+
+h4 {
+text-align: center;
+}
+/*
+ * Display navigation links inline
+ */
+
+.menu {
+  float: right;
+  margin-top: 8px;
+}
+
+.menu li {
+  display: inline;
+}
+
+.menu li + li {
+  margin-left: 35px;
+}
+
+.menu li a {
+  color: #00FF00;
+  text-decoration: none;
 }
