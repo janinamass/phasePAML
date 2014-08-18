@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="jumbo">
+  {% for entry in entries %}
+    <h3>{{ entry }}</h3>
+  {% else %}
+        <h2> </h2>
+  {% endfor %}
+  </ul>
+  </div>
+{% endblock %}
