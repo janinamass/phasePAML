@@ -1,6 +1,6 @@
 #!/usr/bin/python
 __author__ = 'jmass'
-__version__ = '0.0'
+__version__ = '0.1'
 
 import sys
 import getopt
@@ -8,7 +8,7 @@ import datetime
 import os
 import os.path
 import shutil
-
+import ConfigParser
 from helpers.fastahelper import FastaParser
 from helpers.dbhelper import db_check_run
 from helpers.dbhelper import db_get_run_id
@@ -30,6 +30,46 @@ class FastaFilesDoNotMatchException(Exception):
 class HeadersDoNotMatchException(Exception):
     pass
 
+####################################################
+CONF = dict()
+CONF['Directories'] = {}
+CONF['Directories']['db_name'] = 'phasePAML.db'
+CONF['Directories']['input_dir'] = None
+CONF['Directories']['output_dir'] = None
+CONF['Directories']['name'] = "{:%B_%d_%Y_%H%M}".format(datetime.datetime.now())
+CONF['RAxML'] = {}
+CONF['RAxML']['num_bootstraps'] = 100
+CONF['RAxML']['model'] = 'PROTGAMMAJTT'
+CONF['RAxML']['num_cpu'] = '8'
+CONF['Labels'] = {}
+CONF['Labels']['regex'] = None
+CONF['Labels']['level'] = '4'
+CONF['Codeml'] = {}
+CONF['Codeml']['models'] = 'Ah0,Ah1'
+CONF['Paths'] = {}
+CONF['Paths']['prank'] = 'prank'
+CONF['Paths']['raxml'] = 'raxmlHPC'
+CONF['Paths']['pal2nal'] = 'pal2nal'
+CONF['Paths']['codeml'] = 'codeml'
+CONF['Paths']['pysickle'] = 'pysickle'
+####################################################
+
+
+def get_config(configfile):
+    global CONF
+    config = ConfigParser.ConfigParser()
+    config.read(configfile)
+    for section in config.sections():
+        options = config.options(section)
+        for option in options:
+            try:
+                CONF[section][option] = config.get(section, option)
+            except TypeError as e:
+                #sys.stderr.write(str(e))
+                CONF[section] = {}
+                CONF[section][option] = config.get(section, option)
+
+   # print(CONF)
 
 
 def usage():
@@ -43,13 +83,14 @@ def usage():
     ############################################
 
     general options:
+    -c, --config=CONFIG.ini         read configuration from file
     -i, --input_dir=DIR             DIR is where your input FASTA files are located,
                                     it must have a subdirectory 'nuc' and and a subdirectory 'pep'
                                     with the according files
 
     -o, --output_dir=DIR            DIR is where your phasePAML_run folder will be created
     -n, --name=NAME *date           identifier for the run (directory suffix, table name)
-    -b, --num_bootstraps=INT [100]  number of bootstraps (for RAxML runs)
+    -b, --num_bootstraps=INT [1000]  number of bootstraps (for RAxML runs)
     -r, --regex=REGEX               regular expression to detect nodes in the trees
                                     for foreground branch labeling
 
@@ -60,8 +101,8 @@ def usage():
                                     models: [Ah0,Ah1,M0,M1a,M2a,M7,M8,M8a,BM]
 
     -p, --phase=INT                 start/resume from phase INT
-    -c, --num_cores=INT [1]         number of cpus to use
-    # -y, --no_copy                   only create symlink to fasta files (instead of copying)
+    -N, --num_cores=INT [1]         number of cpus to use for raxml
+
     -h, --help                      prints this
     -H, --HELP                      more help
     -M, --model_help                more help on models
@@ -69,7 +110,7 @@ def usage():
 
     print(text)
     sys.exit(2)
-
+#todo fix regex
 
 def show_help():
     # TODO add extended help message
@@ -126,7 +167,23 @@ def show_model_help():
     sys.exit(0)
 
 
-def check_fasta(dir):
+def fix_fasta(fasta=None, backupdir=None, faulty_headers=None):
+    print("fasta: {}, backupdir {} ".format(fasta, backupdir))
+    new_content = ""
+    fp = FastaParser()
+    for h, s in fp.read_fasta(fasta):
+        if h in faulty_headers:
+            pass
+        else:
+            new_content += ">{}\n{}\n".format(h, s)
+
+    print("Info: moving original file to {}\n".format(backupdir))
+    shutil.move(fasta, os.path.join(backupdir, os.path.basename(fasta)))
+    with open(fasta, 'w') as fa_out:
+        fa_out.write(new_content)
+
+
+def check_fasta(dir, fix=False, path_dct=None):
     expected = [os.path.join(dir, "nuc"), os.path.join(dir, "pep")]
     d = os.path.join(dir)
     dirlist = [os.path.join(d, o) for o in os.listdir(d) if os.path.isdir(os.path.join(d, o))]
@@ -145,17 +202,19 @@ def check_fasta(dir):
             else:
                 tmp = fasta_names
     orthogroup_dct = {}
-    for n, p in zip(files_full_dct[expected[0]], files_full_dct[expected[1]]):
+    for n, p in zip(sorted(files_full_dct[expected[0]]), sorted(files_full_dct[expected[1]])):
         n = os.path.join(expected[0], n)
         p = os.path.join(expected[1], p)
-        print(n, p, os.path.basename(n).split(".")[0] )
+        print(n, p, os.path.basename(n).split(".")[0])
         orthogroup_dct[os.path.basename(n).split(".")[0]] = []
         fpn = FastaParser().read_fasta(fasta=n)
         fpn = sorted(fpn)
         fpp = FastaParser().read_fasta(fasta=p)
         fpp = sorted(fpp)
         # check fasta length
+
         for i, j in zip(fpn, fpp):
+            faulty =[]
             orthogroup_dct[os.path.basename(n).split(".")[0]].append(i[0])
             #print(i[0], j[0])
             if i[0] != j[0]:
@@ -168,11 +227,16 @@ def check_fasta(dir):
             if not len_pep == len_nuc / 3 \
                     and not (len_pep - 1 == len_nuc / 3 and j[1][-1] == "*") \
                     and not (len_pep + 1 == len_nuc / 3 and j[1][-1] != "*"):
-                raise DifferentSequenceLengthsException(
-                    "Incompatible sequence length between {}:{} ({}) and {}:{} ({})".
-                    format(n, i[0], len_nuc / 3, p, j[0], len_pep)
-                )
-    print(orthogroup_dct)
+                sys.stderr.write("Incompatible sequence length between {}:{} ({}) and {}:{} ({})".format(n, i[0], len_nuc / 3, p, j[0], len_pep))
+                #raise DifferentSequenceLengthsException(
+                #    "Incompatible sequence length between {}:{} ({}) and {}:{} ({})".
+                #    format(n, i[0], len_nuc / 3, p, j[0], len_pep)
+                #)
+                faulty.append(i[0])
+                #todo add pathdct
+                if fix:
+                    fix_fasta(n, backupdir=path_dct["faulty_nuc"], faulty_headers=faulty)
+                    fix_fasta(p, backupdir=path_dct["faulty_pep"], faulty_headers=faulty)
     return orthogroup_dct
 
 
@@ -186,16 +250,18 @@ def copy_files_to_workdir(input_dir, output_dir):
 def set_path_dct(output_dir, name):
     path_dct = {}
     base_path = os.path.join(output_dir, name)
+    phase_0faulty_nuc = os.path.join(base_path, "faulty_nuc")
+    phase_0faulty_pep = os.path.join(base_path, "faulty_pep")
     phase_0nuc = os.path.join(base_path, "nuc")
     phase_0pep = os.path.join(base_path, "pep")
     phase_1 = os.path.join(base_path, "MSA_pep")
     phase_2 = os.path.join(base_path, "MSA_nuc")
     phase_3 = os.path.join(base_path, "tree")
-    #phase_4 = os.path.join(base_path, "tree_lab")
     phase_5 = os.path.join(base_path, "codeml")
     phase_6 = os.path.join(base_path, "results")
     pysickle = os.path.join(base_path, "pysickle")
-    for i in [phase_0nuc, phase_0pep, phase_1,
+    for i in [phase_0faulty_nuc, phase_0faulty_pep,
+              phase_0nuc, phase_0pep, phase_1,
               phase_2, phase_3, phase_5,
               phase_6,pysickle]:
         path_dct[os.path.basename(i)] = i
@@ -204,25 +270,26 @@ def set_path_dct(output_dir, name):
 
 def make_folder_skeleton(output_dir, name):
     base_path = os.path.join(output_dir, name)
+    phase_0faulty_nuc = os.path.join(base_path, "faulty_nuc")
+    phase_0faulty_pep = os.path.join(base_path, "faulty_pep")
     phase_0nuc = os.path.join(base_path, "nuc")
     phase_0pep = os.path.join(base_path, "pep")
     phase_1 = os.path.join(base_path, "MSA_pep")
     phase_2 = os.path.join(base_path, "MSA_nuc")
     phase_3 = os.path.join(base_path, "tree")
-    #phase_4 = os.path.join(base_path, "tree_lab")
     phase_5 = os.path.join(base_path, "codeml")
     phase_6 = os.path.join(base_path, "results")
     pysickle = os.path.join(base_path, "pysickle")
     if not os.path.exists(base_path):
         os.makedirs(base_path)
-        for i in [phase_0nuc, phase_0pep, phase_1, phase_2, phase_3, phase_5, phase_6, pysickle]:
+        for i in [phase_0faulty_nuc, phase_0faulty_pep, phase_0nuc, phase_0pep, phase_1, phase_2, phase_3, phase_5, phase_6, pysickle]:
             os.makedirs(i)
     else:
         raise DirectoryExistsException("{} already exists.".format(base_path))
 
 
 def is_min_length_paml_msa(paml_msa=None, min_length=None):
-    with open(paml_msa,'r') as paml:
+    with open(paml_msa, 'r') as paml:
         line = paml.readline().strip().split(" ")
         line = [l for l in line if l.strip() != ""]
         alignment_length = int(line[1])
@@ -235,36 +302,33 @@ def is_min_length_paml_msa(paml_msa=None, min_length=None):
         return False
 
 
-DB = "phasePAML.db"
 
 
 def main():
-    input_dir = None
-    output_dir = None
-    name = None
-    num_bootstraps = None
+    global CONF
+    configfile = None
     regex = None
     labeling_level = None
     models = None
     phase = None
     num_cores = None
-    no_copy = False
     #todo rm no_copy option
     try:
         opts, args = getopt.gnu_getopt(
             sys.argv[1:],
-            'i:o:n:b:r:l:m:p:c:yhHM',
+            'c:i:o:n:b:x:r:l:m:p:N:hHM',
             [
+                'config=',
                 'input_dir=',
                 'output_dir=',
                 'name=',
                 'num_bootstraps=',
+                'raxml_model='
                 'regex=',
                 'labeling_level=',
                 'models=',
                 'phase=',
                 'num_cores=',
-                'no_copy',
                 'help',
                 'HELP',
                 'model_help'
@@ -275,26 +339,28 @@ def main():
         usage()
 
     for o, a in opts:
-        if o in ("-i", "--input_dir"):
-            input_dir = a
+        if o in ("-c", "--config"):
+            configfile = a
+        elif o in ("-i", "--input_dir"):
+            CONF['Directories']['input_dir'] = a
         elif o in ("-o", "--output_dir"):
-            output_dir = a
+            CONF['Directories']['output_dir'] = a
         elif o in ("-n", "--name"):
-            name = a
+            CONF['Directories']['name'] = a
         elif o in ("-b", "--num_bootstraps"):
-            num_bootstraps = int(a)
+            CONF['RAxML']['num_bootstraps'] = a
+        elif o in ("-x", "--raxml_model"):
+            CONF['RAxML']['model'] = a
         elif o in ("-r", "--regex"):
-            regex = a
+            CONF['Labels']['regex'] = a
         elif o in ("-l", "--labeling_level"):
-            labeling_level = int(a)
+            CONF['Labels']['level'] = a
         elif o in ("-m", "--models"):
-            models = a
+            CONF['Codeml']['models'] = a
         elif o in ("-p", "--phase"):
             phase = int(a)
-        elif o in ("-c", "--num_cores"):
-            num_cores = int(a)
-        #elif o in ("-y", "--no_copy"):
-            #no_copy = True
+        elif o in ("-N", "--num_cores"):
+            CONF['RAxML']['num_cpu'] = a
         elif o in ("-h", "--help"):
             usage()
         elif o in ("-H", "--HELP"):
@@ -304,58 +370,61 @@ def main():
         else:
             assert False, "unhandled option"
 
+    if configfile:
+        get_config(configfile=configfile)
+    try:
+        input_dir = CONF['Directories']['input_dir']
+    except KeyError as e:
+        input_dir = None
     if not input_dir:
         print("No input directory.\n")
         usage()
+    try:
+        output_dir = CONF['Directories']['output_dir']
+    except KeyError as e:
+        output_dir = None
     if not output_dir:
         print("No output directory.\n")
         usage()
-    if not name:
-        name = "{:%B_%d_%Y_%H%M}".format(datetime.datetime.now())
-    if not num_bootstraps:
-        num_bootstraps = 100
+    name = CONF['Directories']['name']
+    regex = CONF['Labels']['regex']
     if not regex:
         print("No regex.\n")
         usage()
 
-    if not labeling_level:
-        labeling_level = 4
-    if not models:
-        models = "Ah1,Ah0"
     if phase is None:
         print("No phase.\n")
         usage()
-    if not num_cores:
-        num_cores = 1
-    # ##################
-    # todo sanity check:
-    #prank
-    #mafft
-    #raxml
-    #pal2nal
-    #codeml
-    ################### raise Warning, but offer to continue [y,N]V
 
     #todo if phase == 0, check source dir, otherwise check rundirs!
     #validate input folder, pep and nuc files need to match
+
+    db = CONF["Directories"]["db_name"]
     path_dct = set_path_dct(output_dir, name=name)
     if phase == 0:
-        try:
-            orthogroup_dct = check_fasta(dir=input_dir)
-        except (FastaFilesDoNotMatchException, DifferentSequenceLengthsException) as e:
-            sys.stderr.write(repr(e) + '\n')
-            sys.exit(1)
         try:
             make_folder_skeleton(output_dir=output_dir, name=name)
         except DirectoryExistsException as e:
             pass
             print(e)
             #sys.exit(1)
+        try:
+            orthogroup_dct = check_fasta(dir=input_dir)
+        except FastaFilesDoNotMatchException as e:
+            sys.stderr.write(repr(e) + '\n')
+            sys.exit(1)
+        except DifferentSequenceLengthsException as e:
+            sys.stderr.write(repr(e) + '\n')
+
         copy_files_to_workdir(input_dir=os.path.join(input_dir, "nuc"), output_dir=path_dct["nuc"])
         copy_files_to_workdir(input_dir=os.path.join(input_dir, "pep"), output_dir=path_dct["pep"])
-        print(db_check_run(os.path.join(output_dir, DB), run_name=name, orthogroup_dct=orthogroup_dct))
+        try:
+            orthogroup_dct = check_fasta(dir=os.path.join(output_dir, name), fix=True, path_dct=path_dct)
+        except DifferentSequenceLengthsException as e:
+            print(e)
+        print(db_check_run(os.path.join(output_dir, db), run_name=name, orthogroup_dct=orthogroup_dct))
         phase = 1
-    run_id = db_get_run_id(DB, run_name=name)
+    run_id = db_get_run_id(db, run_name=name)
     if not run_id:
         sys.stderr.write("Got No run_id, check your db.\n")
         #sys.exit(1)
@@ -375,9 +444,9 @@ def main():
                 infile = os.path.join(path_dct["pep"], f)
                 outfile = os.path.join(path_dct["MSA_pep"], f.split(".")[0]+".msa")
                 orthogroup = os.path.basename(infile).split(".")[0]
-                run_prank(infile=infile,
+                run_prank(program=CONF['Paths']['prank'], infile=infile,
                           outfile=outfile,
-                          db=DB,
+                          db=db,
                           run_id=run_id,
                           orthogroup=orthogroup,
                           phase=1)
@@ -400,12 +469,11 @@ def main():
         for nuc_fa, pep_msa in nuc_msa_dct.items():
             orthogroup = os.path.basename(pep_msa).split(".")[0]
             #produces .pamlg, .paml
-            run_pal2nal(pep_msa=pep_msa, nuc_fa=nuc_fa,
+            run_pal2nal(program=CONF['Paths']['pal2nal'], pep_msa=pep_msa, nuc_fa=nuc_fa,
                         outfile=os.path.join(path_dct["MSA_nuc"],
                                              orthogroup),
                         cpu=1,
-                        semaphore=None,
-                        db=DB,
+                        db=db,
                         orthogroup=orthogroup,
                         run_id=run_id,
                         phase=2)
@@ -426,16 +494,16 @@ def main():
         pysickle=True
         if pysickle:
             print("running pysickle")
-            run_pysickle(dir=path_dct["pysickle"], db=DB,orthogroup="test",run_id=run_id,phase=9,semaphore=None)
+            run_pysickle(program=CONF['Paths']['pysickle'], dir=path_dct["pysickle"], db=db,orthogroup="test",run_id=run_id,phase=9)
             for pysickled in os.listdir(os.path.join(path_dct["pysickle"], "ps_out_si")):
                 print(pysickled,"puc")
                 if pysickled.endswith(".tmp"):#marks new pep.fa
                     print(pysickled)
                     new_name = pysickled.replace(".", "_").replace("_tmp", ".fa")
                     print(new_name, "new name", "infile:", os.path.join(path_dct["pysickle"],"ps_out_si", new_name))
-                    run_prank(infile=os.path.join(path_dct["pysickle"],"ps_out_si", pysickled),
+                    run_prank(program=CONF['Paths']['prank'],infile=os.path.join(path_dct["pysickle"],"ps_out_si", pysickled),
                               outfile= os.path.join(path_dct["MSA_pep"], new_name.split(".")[0]+".msa"),
-                              cpu=1, semaphore=None, db=DB,
+                              cpu=1, db=db,
                               orthogroup=new_name.split(".")[0], run_id=run_id,
                               phase=9)
                     #nwo we still need the new nuc
@@ -443,8 +511,8 @@ def main():
                     print(nucfa,"NUCFA")
                     orthogroup=new_name.split(".")[0]
                     outfile = os.path.join(path_dct["MSA_nuc"], orthogroup+".msa")
-                    run_pal2nal(pep_msa=os.path.join(path_dct["MSA_pep"], new_name.split(".")[0]+".msa"),
-                                outfile=outfile, nuc_fa=os.path.join(path_dct["MSA_nuc"],nucfa), db=DB, phase=10,run_id=run_id,semaphore=None,orthogroup=orthogroup)
+                    run_pal2nal(program=CONF['Paths']['pal2nal'], pep_msa=os.path.join(path_dct["MSA_pep"], new_name.split(".")[0]+".msa"),
+                                outfile=outfile, nuc_fa=os.path.join(path_dct["MSA_nuc"],nucfa), db=db, phase=10,run_id=run_id, orthogroup=orthogroup)
 
                     shutil.copy(outfile+".paml", os.path.join(path_dct["codeml"], orthogroup+".paml"))
             #todo merge back into main ...
@@ -454,9 +522,8 @@ def main():
         for pep_msa in os.listdir(path_dct["MSA_pep"]):
             if pep_msa.endswith(".msa"):
                 orthogroup = os.path.basename(pep_msa).split(".")[0]
-                #todo raxml model, for now always PROTGAMMAJTT
-                run_raxml(pep_msa=os.path.join(path_dct["MSA_pep"], pep_msa), outdir=path_dct['tree'],
-                          num_bootstraps=5, db=DB, model="PROTGAMMAJTT",
+                run_raxml(program=CONF['Paths']['raxml'], pep_msa=os.path.join(path_dct["MSA_pep"], pep_msa), outdir=path_dct['tree'],
+                          num_bootstraps=int(CONF['RAxML']['num_bootstraps']), db=db, model=CONF['RAxML']['model'],
                           orthogroup=orthogroup, run_id=run_id,
                           phase=phase, workdir=os.path.abspath(path_dct["tree"]))
         phase = 4
@@ -476,9 +543,9 @@ def main():
                 print(pamlfile, mrc)
                 print(regex)
                 #todo unroot
-                run_ctl_maker(paml_file=pamlfile, tree_file=treefile, model=models,
-                              outfile=treefile, regex=regex,
-                              depth=4, semaphore=None, db=DB,
+                run_ctl_maker(paml_file=pamlfile, tree_file=treefile, model=CONF['Codeml']['models'],
+                              outfile=treefile, regex=CONF['Labels']['regex'],
+                              depth=int(CONF['Labels']['level']), db=db,
                               orthogroup=orthogroup, run_id=run_id,
                               phase=phase)
         phase = 5
@@ -487,10 +554,9 @@ def main():
             if ctl.endswith(".ctl"):
                 workdir = path_dct["codeml"]
                 orthogroup = ctl.split(".")[0]
-                run_codeml(ctl_file=ctl, work_dir=workdir,
-                           db=DB, orthogroup=orthogroup,
-                           run_id=run_id, phase=phase,
-                           semaphore=None)
+                run_codeml(program=CONF['Paths']['codeml'], ctl_file=ctl, work_dir=workdir,
+                           db=db, orthogroup=orthogroup,
+                           run_id=run_id, phase=phase)
 
 
     # raise OverwriteRunException if started with phase below completed phases

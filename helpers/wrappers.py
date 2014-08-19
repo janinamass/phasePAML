@@ -55,13 +55,12 @@ def db_logger(f):
 # phase 1: MSA pep
 @db_logger
 def run_prank(infile=None, outfile=None,
-              cpu=1, semaphore=None,
-              db=None, orthogroup=None,
-              run_id=None, phase=None):
-    p = subprocess.Popen('prank +F -d={} -o={}'.format(infile, outfile),
+              cpu=1, db=None, orthogroup=None,
+              run_id=None, phase=None, program=None):
+    p = subprocess.Popen('{} +F -d={} -o={} '.format(program, infile, outfile),
                          shell=True, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
-    # p_out, p_err = p.communicate()
+    p_out, p_err = p.communicate()
     retval = p.wait()
     if retval != 0:
         raise PipelineException
@@ -84,11 +83,10 @@ def sort_fasta(nuc_fa=None, pep_msa=None, nuc_msa_out=None):
 
 
 @db_logger
-def run_pal2nal(pep_msa=None, outfile=None,
-                nuc_fa=None, cpu=1,
-                semaphore=None,
-                db=None, orthogroup=None,
-                run_id=None, phase=None):
+def run_pal2nal(program = None, pep_msa=None, outfile=None,
+                nuc_fa=None, cpu=1, db=None,
+                orthogroup=None, run_id=None,
+                phase=None):
     pal2nal_nuc_in = outfile + ".nuc"
     sort_fasta(nuc_fa=nuc_fa, pep_msa=pep_msa, nuc_msa_out=pal2nal_nuc_in)
     paml = outfile + ".paml"
@@ -96,7 +94,7 @@ def run_pal2nal(pep_msa=None, outfile=None,
     print("CALL pal2nal nuc: {} msa: {} out:{}", pal2nal_nuc_in, pep_msa, paml)
     print("CALL pal2nal nuc: {} msa: {} out:{}", pal2nal_nuc_in, pep_msa, pamlg)
 
-    p = subprocess.Popen('pal2nal.pl {} {} -output paml -nogap > {} '.format(pep_msa, pal2nal_nuc_in, paml),
+    p = subprocess.Popen('{} {} {} -output paml -nogap > {} '.format(program, pep_msa, pal2nal_nuc_in, paml),
                          shell=True, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE)
     p_out, p_err = p.communicate()
@@ -118,18 +116,16 @@ def run_pal2nal(pep_msa=None, outfile=None,
 
             return retval
 
-
 @db_logger
-def run_raxml(pep_msa=None, outdir=None, model="PROTGAMMAJTT",
-              bootstrap_seed=123, num_bootstraps=100, workdir = None,
-              num_threads=1, semaphore=None,
-              db=None, orthogroup=None,
+def run_raxml(program = None, pep_msa=None, outdir=None, model=None,
+              bootstrap_seed=123, num_bootstraps=None, workdir = None,
+              num_cpu=None, db=None, orthogroup=None,
               run_id=None, phase=None):
     run_name = orthogroup
     pep_msa_phy = pep_msa+".phy"
     mfa2phy(pep_msa, pep_msa_phy)
-    raxml_call = 'raxmlHPC -m {} -T {} -n {} -s {} -b {} -N {} -w {}'.format(
-        model, num_threads, run_name, pep_msa_phy, bootstrap_seed, num_bootstraps, workdir)
+    raxml_call = '{} -m {} -T {} -n {} -s {} -b {} -N {} -w {}'.format(program,
+        model, num_cpu, run_name, pep_msa_phy, bootstrap_seed, num_bootstraps, workdir)
     #todo raxml might have different names on other systems
     print(raxml_call)
     p = subprocess.Popen(raxml_call, shell=True,
@@ -148,7 +144,7 @@ def run_raxml(pep_msa=None, outdir=None, model="PROTGAMMAJTT",
         bstree = os.path.join(workdir,"RAxML_bootstrap."+orthogroup)
         mrc = orthogroup+".mrc"
         # raxmlHPC -m $model -J MR -z RAxML_bootstrap.run.$nm -n $short
-        raxml_call_consensus = 'raxmlHPC -m {} -J MR -z {} -n {} -w {}'.format(model, bstree, mrc, workdir)
+        raxml_call_consensus = '{} -m {} -J MR -z {} -n {} -w {}'.format(program, model, bstree, mrc, workdir)
         p = subprocess.Popen(raxml_call_consensus,
                              shell=True,
                              stdout=subprocess.PIPE,
@@ -184,10 +180,10 @@ def run_ctl_maker(paml_file=None, tree_file=None,model="Ah0,Ah1",outfile=None,
 
 
 @db_logger
-def run_codeml(ctl_file=None, work_dir=None,
+def run_codeml(program=None, ctl_file=None, work_dir=None,
                db=None, orthogroup=None,
                run_id=None, phase=None, semaphore=None):
-    codeml_call = 'codeml {}'.format(ctl_file)
+    codeml_call = '{} {}'.format(program, ctl_file)
     orig_wd = os.getcwd()
     os.chdir(os.path.abspath(work_dir))
     p = subprocess.Popen(codeml_call,
@@ -207,7 +203,7 @@ def run_codeml(ctl_file=None, work_dir=None,
 
 
 @db_logger
-def run_pysickle(dir=None, suffix=".msa",outdir=None,
+def run_pysickle(program=None, dir=None, suffix=".msa",outdir=None,
                db=None, orthogroup=None,
                run_id=None, phase=None, semaphore=None):
     pysickle_call = 'pysickle.py -F {} -s {}'.format(dir, suffix)
