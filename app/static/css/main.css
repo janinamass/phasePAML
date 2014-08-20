@@ -95,3 +95,16 @@ text-align: center;
   color: #00FF00;
   text-decoration: none;
 }
+
+
+div.wrap {
+    -ms-word-break: break-all;
+    word-break: break-all;
+    width: 100%;
+
+}
+
+.table-break-all
+{
+    word-break: break-all;
+}

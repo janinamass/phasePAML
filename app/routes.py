@@ -55,19 +55,28 @@ def show_success():
     return render_template('show_success.html', entries=query_db('select * from phase where status ="s" ORDER BY datetime(timestamp) DESC'))
 
 
-@app.route('/add', methods=['POST'])
-def add_entry():
-    db = get_db()
-    db.execute('insert into phase (orthogroup, phase) values (?, ?)',
-               [request.form['orthogroup'], request.form['phase']])
-    db.commit()
-    flash('New entry was successfully posted')
-    return redirect(url_for('show_success'))
+@app.route('/orthogroups')
+def show_ortho():
+    entries = query_db('select run_id, orthogroup, headers from orthoinfo')
+    for e in entries:
+        print(e['headers'])
+        print(e['headers'].replace(',',' '))
+    return render_template('show_ortho.html', entries=query_db('select * from orthoinfo'))
+
 
 @app.route('/subset', methods=['POST'])
 def filter_subset():
     db = get_db()
-    entries = query_db('select * from phase where orthogroup = ? and run_id = ? ORDER BY datetime(timestamp) DESC', [request.form['orthogroup'], request.form['run_id'] ])
+    #entries = query_db('select * from phase where orthogroup = ? and run_id = ? ORDER BY datetime(timestamp) DESC', [request.form['orthogroup'], request.form['run_id']])
+    #and_query = ('?', [request.form['rad_and']], )
+    andor = request.form['andor']
+    if andor == "AND":
+        entries = query_db('select * from phase where orthogroup = ? AND  run_id = ? ORDER BY datetime(timestamp) DESC', [request.form['orthogroup'], request.form['run_id']])
+
+    if andor == "OR":
+        entries = query_db('select * from phase where orthogroup = ? OR  run_id = ? ORDER BY datetime(timestamp) DESC', [request.form['orthogroup'], request.form['run_id']])
+    #or_query = ('?',[request.form['or']])
+    #print(or_query)
     #if request.form['and']:
     #    entries = query_db('select * from phase where orthogroup = ? and run_id = ? ORDER BY datetime(timestamp) DESC', [request.form['orthogroup'], request.form['run_id'] ])
     #    print('select * from phase where orthogroup = ? and run_id = ? ORDER BY datetime(timestamp) DESC', [request.form['orthogroup'], request.form['run_id']])
@@ -76,10 +85,12 @@ def filter_subset():
     #    print('select * from phase where orthogroup = ? or run_id = ? ORDER BY datetime(timestamp) DESC', [request.form['orthogroup'], request.form['run_id']])
     return show_entries(entries=entries)
 
+def split_space(string):
+    return string.strip().split(',')
 
 
 if __name__ == '__main__':
+    #app.jinja_env.filters['split_space'] = split_space
     app.run(debug=True)
 
 
-#todo rm all string formatting

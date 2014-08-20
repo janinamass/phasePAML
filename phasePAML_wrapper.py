@@ -37,6 +37,7 @@ CONF['Directories']['db_name'] = 'phasePAML.db'
 CONF['Directories']['input_dir'] = None
 CONF['Directories']['output_dir'] = None
 CONF['Directories']['name'] = "{:%B_%d_%Y_%H%M}".format(datetime.datetime.now())
+CONF['Pysickle']['threshold'] = 9999
 CONF['RAxML'] = {}
 CONF['RAxML']['num_bootstraps'] = 100
 CONF['RAxML']['model'] = 'PROTGAMMAJTT'
@@ -65,11 +66,8 @@ def get_config(configfile):
             try:
                 CONF[section][option] = config.get(section, option)
             except TypeError as e:
-                #sys.stderr.write(str(e))
                 CONF[section] = {}
                 CONF[section][option] = config.get(section, option)
-
-   # print(CONF)
 
 
 def usage():
@@ -77,9 +75,9 @@ def usage():
     #############################################
     # example usage:
     # phasePAML_wrapper.py
-    #        --name="testrun_42" --num_bootstraps=100  --regex='GRM.*'
+    #        --name="testrun_42" --num_bootstraps=100  --regex='GRM*'
     #        --labeling_level=4 --models="Ah0,Ah1"
-    #        --num_cores=4 --phase=0 --no_copy
+    #        --num_cores=4 --phase=0
     ############################################
 
     general options:
@@ -90,6 +88,9 @@ def usage():
 
     -o, --output_dir=DIR            DIR is where your phasePAML_run folder will be created
     -n, --name=NAME *date           identifier for the run (directory suffix, table name)
+    -t, --pysickle_threshold        minimum length for paml alignment (no gaps) to pass
+                                    without triggering pysickle
+
     -b, --num_bootstraps=INT [1000]  number of bootstraps (for RAxML runs)
     -r, --regex=REGEX               regular expression to detect nodes in the trees
                                     for foreground branch labeling
@@ -110,7 +111,7 @@ def usage():
 
     print(text)
     sys.exit(2)
-#todo fix regex
+
 
 def show_help():
     # TODO add extended help message
@@ -302,8 +303,6 @@ def is_min_length_paml_msa(paml_msa=None, min_length=None):
         return False
 
 
-
-
 def main():
     global CONF
     configfile = None
@@ -312,17 +311,17 @@ def main():
     models = None
     phase = None
     num_cores = None
-    #todo rm no_copy option
     try:
         opts, args = getopt.gnu_getopt(
             sys.argv[1:],
-            'c:i:o:n:b:x:r:l:m:p:N:hHM',
+            'c:i:o:n:b:t:x:r:l:m:p:N:hHM',
             [
                 'config=',
                 'input_dir=',
                 'output_dir=',
                 'name=',
                 'num_bootstraps=',
+                'pysickle_threshold='
                 'raxml_model='
                 'regex=',
                 'labeling_level=',
@@ -347,6 +346,8 @@ def main():
             CONF['Directories']['output_dir'] = a
         elif o in ("-n", "--name"):
             CONF['Directories']['name'] = a
+        elif o in ("-t", "--pysickle_threshold"):
+            CONF['Pysickle']['threshold'] = a
         elif o in ("-b", "--num_bootstraps"):
             CONF['RAxML']['num_bootstraps'] = a
         elif o in ("-x", "--raxml_model"):
@@ -482,8 +483,7 @@ def main():
             if pamlfile.endswith(".paml"):
                 shutil.copy(os.path.join(path_dct["MSA_nuc"], pamlfile), os.path.join(path_dct["codeml"], pamlfile))
                 #check if the files are min length, copy pep msa file to pysickle if they're not
-                if not is_min_length_paml_msa(os.path.join(path_dct["MSA_nuc"], pamlfile), min_length=10000):
-                    print("NOT MINLEN")
+                if not is_min_length_paml_msa(os.path.join(path_dct["MSA_nuc"], pamlfile), min_length=int(CONF['Pysickle']['threshold'])):
                     #todo fix qnd hack
                     orthogroup = pamlfile.split(".")[0]
                     shutil.copy(os.path.join(path_dct["MSA_pep"], orthogroup+".msa"), os.path.join(path_dct["pysickle"], orthogroup+".msa"))

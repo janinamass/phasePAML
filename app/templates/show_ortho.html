@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1>Running:</h1>
+<div class="jumbo">
+    <table border="0">
+        <tr>
+            <th>run_id </th>
+            <th>orthogroup</th>
+            <th>headers</th>
+        </tr></table>
+<table class="table-break-all" border="0">
+  {% for entry in entries %}
+      <tr>
+            <td>{{ entry.run_id }}</td>
+            <td>{{ entry.orthogroup }}</td>
+            <td>{{ entry.headers }}</td>
+       </tr>
+  {% endfor %}
+        </table>
+  </div>
+{% endblock %}
+

@@ -4,8 +4,10 @@
       <dl>
         <dt>run_id:
         <dd><input type=text size=30 name=run_id>
-          <input type="radio" name="logic" value="and">AND
-          <input type="radio" name="logic" value="or">OR<br>
+          <dd><select name="andor" size="1">
+            <option>AND</option>
+            <option>OR</option>
+          </select>
           <dt>orthogroup:
           <dd><input type=text size=30 name=orthogroup>
         <dt><input type=submit value=filter>
@@ -40,3 +42,4 @@
         <th> {{ key }} </th>
         <td> {{ value }} </td>
    </tr>
+
