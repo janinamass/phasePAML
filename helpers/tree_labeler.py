@@ -262,7 +262,6 @@ def read_tree(tree):
 
 
 def labelForPaml(unlabelledTreeAsString, listOfNodes, tree):
-    print("ULT", unlabelledTreeAsString)
     t = EvolTree(unlabelledTreeAsString)
     marks = []
     count = 1
@@ -319,7 +318,6 @@ def label_regex(unlabeled_tree, regex, treefile, depth=4,
     # traverse and match
     for node in t.traverse():
         if re.match(pattern, node.name):
-            print("MATCH", node.name, node.node_id)
             node.set_style(nsMatch)
             n = node
             try:

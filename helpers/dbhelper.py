@@ -6,7 +6,7 @@ def q(s):
     return '"' + s + '"'
 
 
-def check_phase(cursor, run_name):
+def check_phase(cursor=None, run_name=None):
     pass
 
 
@@ -39,13 +39,11 @@ def db_check_run(db, run_name, orthogroup_dct):
             run_id = cur.fetchone()[0]
             init_orthoinfotable(connection=con,
                                 run_id=run_id,
-                                orthogroup_dct=orthogroup_dct
-            )
+                                orthogroup_dct=orthogroup_dct)
 
             init_phasetable(connection=con,
                             run_id=run_id,
-                            orthogroup_list=orthogroup_dct.keys()
-            )
+                            orthogroup_list=orthogroup_dct.keys())
 
             con.commit()
 
@@ -64,11 +62,11 @@ def init_phasetable(connection, run_id, orthogroup_list):
     cur = connection.cursor()
     cur.execute(cmd)
     print("phase table created.\n")
-    #status
+    # status
     # f: failed
     # r: running
     # s: success
-    cmdf = lambda runid, phase, orthogroup, status : \
+    cmdf = lambda runid, phase, orthogroup, status: \
         'INSERT INTO phase(run_id, phase, orthogroup, status)' \
         ' VALUES ({},{},{},{})'.format(runid, phase, orthogroup, status)
 
@@ -81,16 +79,16 @@ def init_phasetable(connection, run_id, orthogroup_list):
 
 
 def update_phasetable(db, run_id, orthogroup_id, phase, status):
-    #todo test
+    # todo test
     # update might be misleading, just insert another line for the current step
-    #status
+    # status
     # f: failed
     # r: running
     # s: success
     con = sqlite3.connect(db)
     with con:
         cur = con.cursor()
-        cmdf = lambda runid, phase, orthogroup_id, status : \
+        cmdf = lambda runid, phase, orthogroup_id, status: \
             'INSERT INTO phase(run_id, phase, orthogroup, status)' \
             ' VALUES ({},{},{},{})'.format(runid, phase, orthogroup_id, status)
 
@@ -98,11 +96,6 @@ def update_phasetable(db, run_id, orthogroup_id, phase, status):
         print(cmd, "CMD")
         cur.execute(cmd)
         con.commit()
-
-
-
-
-
 
 
 def init_orthoinfotable(connection, run_id, orthogroup_dct):
@@ -122,7 +115,7 @@ def init_orthoinfotable(connection, run_id, orthogroup_dct):
         ' VALUES ({},{},{})'.format(runid, orthgroup, headers)
 
     for o in orthogroup_dct:
-        print(o,"OO")
+        print(o, "OO")
         qo = q(o)  # orthogroup_n   ame
         cmd = cmdf(run_id, qo, q(",".join(orthogroup_dct[o])))
         print(cmd)
