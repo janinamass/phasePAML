@@ -37,6 +37,7 @@ CONF['Directories']['db_name'] = 'phasePAML.db'
 CONF['Directories']['input_dir'] = None
 CONF['Directories']['output_dir'] = None
 CONF['Directories']['name'] = "{:%B_%d_%Y_%H%M}".format(datetime.datetime.now())
+CONF['Pysickle'] = {}
 CONF['Pysickle']['threshold'] = 9999
 CONF['RAxML'] = {}
 CONF['RAxML']['num_bootstraps'] = 100
@@ -408,7 +409,7 @@ def main():
         except DirectoryExistsException as e:
             pass
             print(e)
-            #sys.exit(1)
+            sys.exit(1)
         try:
             orthogroup_dct = check_fasta(dir=input_dir)
         except FastaFilesDoNotMatchException as e:
