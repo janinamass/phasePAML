@@ -409,7 +409,7 @@ def main():
         except DirectoryExistsException as e:
             pass
             print(e)
-            sys.exit(1)
+            #sys.exit(1)
         try:
             orthogroup_dct = check_fasta(dir=input_dir)
         except FastaFilesDoNotMatchException as e:

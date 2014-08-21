@@ -20,9 +20,27 @@ def db_check_run(db, run_name, orthogroup_dct):
             cur = con.cursor()
             cur.execute(cmd)
             res = cur.fetchall()
-        if len(res) > 0:
-            print("Run {} already exists.\n".format(run_name))
-            check_phase(cur, run_name)
+            if len(res) > 0:
+                print("Run {} already exists.\n".format(run_name))
+                check_phase(cur, run_name)
+            else:
+                cmd = "INSERT INTO run(name) VALUES({});".format(q(run_name))
+                cur.execute(cmd)
+                con.commit()
+                cmd = "SELECT id FROM run WHERE name = " + q(run_name)
+                cur.execute(cmd)
+                run_id = cur.fetchone()[0]
+                init_orthoinfotable(connection=con,
+                                    run_id=run_id,
+                                    orthogroup_dct=orthogroup_dct)
+
+                init_phasetable(connection=con,
+                                run_id=run_id,
+                                orthogroup_list=orthogroup_dct.keys())
+
+                con.commit()
+
+
     else:
         print("Creating new db file {}.\n".format(db))
         cmd = 'CREATE TABLE run (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);'
@@ -76,6 +94,7 @@ def init_phasetable(connection, run_id, orthogroup_list):
         print(cmd, "CMD")
         print(cmd)
         cur.execute(cmd)
+    connection.commit()
 
 
 def update_phasetable(db, run_id, orthogroup_id, phase, status):
@@ -120,6 +139,7 @@ def init_orthoinfotable(connection, run_id, orthogroup_dct):
         cmd = cmdf(run_id, qo, q(",".join(orthogroup_dct[o])))
         print(cmd)
         cur.execute(cmd)
+    connection.commit()
 
 
 def db_get_run_id(db, run_name):
