@@ -7,7 +7,7 @@ import os
 from fastahelper import FastaParser
 from mfa2phy import mfa2phy
 from tree_labeler import make_ctl_tree
-
+from codeml_summary import calculatePvalue, CODEMLParser
 
 class PipelineException(Exception):
     pass
@@ -226,3 +226,25 @@ def run_pysickle(program=None, dir=None, suffix=".msa",outdir=None,
         raise PipelineException
     else:
         return retval
+
+
+@db_logger
+def run_codeml_summary(h0=None, h1=None, db=None, outfile_prefix=None, orthogroup=None,
+               run_id=None, phase=None):
+    try:
+        pval = calculatePvalue(h0, h1)
+        cp = CODEMLParser()
+        sitesNEB = cp.getPositiveSitesNEB(h1)
+        sitesBEB = cp.getPositiveSitesBEB(h1)
+        with open(outfile_prefix+orthogroup+".csv", 'a') as out:
+            out.write(pval)
+        with open(outfile_prefix+"_summary.csv",'a') as out:
+            out.write(pval)
+        with open(outfile_prefix+orthogroup+".neb", 'a') as out:
+            out.write(sitesNEB)
+        with open(outfile_prefix+out+".beb", 'a') as out:
+            out.write(sitesBEB)
+
+    except Exception:
+        raise PipelineException
+    return 0
