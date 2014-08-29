@@ -338,13 +338,18 @@ def main():
         print (str(err))
         usage()
 
-    for o, a in opts:
+    for o, a in opts: #config first
         if o in ("-c", "--config"):
             configfile = a
+            get_config(configfile=configfile)
+    for o, a in opts:
+        if o in ("-c", "--config"):
+            pass
         elif o in ("-i", "--input_dir"):
             CONF['Directories']['input_dir'] = a
         elif o in ("-o", "--output_dir"):
             CONF['Directories']['output_dir'] = a
+            print(CONF['Directories'])
         elif o in ("-n", "--name"):
             CONF['Directories']['name'] = a
         elif o in ("-t", "--pysickle_threshold"):
@@ -372,8 +377,6 @@ def main():
         else:
             assert False, "unhandled option"
 
-    if configfile:
-        get_config(configfile=configfile)
     try:
         input_dir = CONF['Directories']['input_dir']
     except KeyError as e:
@@ -458,7 +461,8 @@ def main():
         nucfiles = os.listdir(path_dct["nuc"])
         nuc_msa_dct = {}
         for f in os.listdir(path_dct["MSA_pep"]):
-            msa_file = os.path.join(path_dct["MSA_pep"], f)
+            if f.endswith(".msa"): #ignore .reduced
+                msa_file = os.path.join(path_dct["MSA_pep"], f)
             nucfile = [os.path.join(path_dct["nuc"], n) for n in nucfiles if n.split(".")[0] == f.split(".")[0]]
             if len(nucfile) > 1:
                 sys.stderr.write("Sth wrong with your fasta files,"
@@ -470,6 +474,8 @@ def main():
         #only pass if all files have a match
         for nuc_fa, pep_msa in nuc_msa_dct.items():
             orthogroup = os.path.basename(pep_msa).split(".")[0]
+            #if not pep_msa.endswith('.msa'):
+            #    continue
             #produces .pamlg, .paml
             run_pal2nal(program=CONF['Paths']['pal2nal'], pep_msa=pep_msa, nuc_fa=nuc_fa,
                         outfile=os.path.join(path_dct["MSA_nuc"],
@@ -488,16 +494,14 @@ def main():
                     #todo fix qnd hack
                     orthogroup = pamlfile.split(".")[0]
                     shutil.copy(os.path.join(path_dct["MSA_pep"], orthogroup+".msa"), os.path.join(path_dct["pysickle"], orthogroup+".msa"))
-                    #todo rm next 2 lines
                     nuc = [n for n in os.listdir(path_dct["nuc"]) if n.split(".")[0] == orthogroup][0]
                     shutil.copy(os.path.join(path_dct["nuc"], nuc), os.path.join(path_dct["pysickle"], nuc))
                     #todo if pysickle
         pysickle=True
         if pysickle:
             print("running pysickle")
-            run_pysickle(program=CONF['Paths']['pysickle'], dir=path_dct["pysickle"], db=db,orthogroup="test",run_id=run_id,phase=9)
+            run_pysickle(program=CONF['Paths']['pysickle'], dir=path_dct["pysickle"], db=db,orthogroup="__pysickle__",run_id=run_id,phase=999)
             for pysickled in os.listdir(os.path.join(path_dct["pysickle"], "ps_out_si")):
-                print(pysickled,"puc")
                 if pysickled.endswith(".tmp"):#marks new pep.fa
                     print(pysickled)
                     new_name = pysickled.replace(".", "_").replace("_tmp", ".fa")
@@ -506,20 +510,18 @@ def main():
                               outfile= os.path.join(path_dct["MSA_pep"], new_name.split(".")[0]+".msa"),
                               cpu=1, db=db,
                               orthogroup=new_name.split(".")[0], run_id=run_id,
-                              phase=9)
+                              phase=99)
                     #nwo we still need the new nuc
                     nucfa = [n for n in os.listdir(path_dct["nuc"]) if n.split(".")[0] == pysickled.split(".")[0]][0]
-                    print(nucfa,"NUCFA")
                     orthogroup=new_name.split(".")[0]
                     outfile = os.path.join(path_dct["MSA_nuc"], orthogroup+".msa")
                     run_pal2nal(program=CONF['Paths']['pal2nal'], pep_msa=os.path.join(path_dct["MSA_pep"], new_name.split(".")[0]+".msa"),
                                 outfile=outfile, nuc_fa=os.path.join(path_dct["MSA_nuc"],nucfa), db=db, phase=10,run_id=run_id, orthogroup=orthogroup)
-
+                    #merge back
                     shutil.copy(outfile+".paml", os.path.join(path_dct["codeml"], orthogroup+".paml"))
-            #todo merge back into main ...
 
         phase = 3 #raxml
-    if phase == 3:
+    if phase == 3: #this will fail if raxml was run there before
         for pep_msa in os.listdir(path_dct["MSA_pep"]):
             if pep_msa.endswith(".msa"):
                 orthogroup = os.path.basename(pep_msa).split(".")[0]
@@ -534,6 +536,9 @@ def main():
             if mrc.endswith(".mrc") and mrc.startswith("RAxML_MajorityRuleConsensusTree."):
                 new_name = mrc.split("RAxML_MajorityRuleConsensusTree.")[1]
                 shutil.copy(os.path.join(path_dct["tree"], mrc), os.path.join(path_dct["codeml"], new_name))
+            elif mrc.startswith("RAxML_result"): #non bootstrap trees
+                new_name = mrc.split("RAxML_result.")[1]+".mrc"
+                shutil.copy(os.path.join(path_dct["tree"], mrc), os.path.join(path_dct["codeml"], new_name))
         #todo remove tree_lab folder
         for mrc in os.listdir(path_dct["codeml"]):
             if mrc.endswith(".mrc"):
@@ -543,7 +548,7 @@ def main():
                 print(orthogroup)
                 print(pamlfile, mrc)
                 print(regex)
-                #todo unroot
+
                 run_ctl_maker(paml_file=pamlfile, tree_file=treefile, model=CONF['Codeml']['models'],
                               outfile=treefile, regex=CONF['Labels']['regex'],
                               depth=int(CONF['Labels']['level']), db=db,

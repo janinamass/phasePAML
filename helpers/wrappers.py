@@ -112,6 +112,8 @@ def run_pal2nal(program = None, pep_msa=None, outfile=None,
         retval = p.wait()
         if retval != 0:
             raise PipelineException
+        elif p_err != "":
+            raise PipelineException
         else:
 
             return retval
@@ -124,8 +126,12 @@ def run_raxml(program = None, pep_msa=None, outdir=None, model=None,
     run_name = orthogroup
     pep_msa_phy = pep_msa+".phy"
     mfa2phy(pep_msa, pep_msa_phy)
-    raxml_call = '{} -m {} -T {} -n {} -s {} -b {} -N {} -w {}'.format(program,
-        model, num_cpu, run_name, pep_msa_phy, bootstrap_seed, num_bootstraps, workdir)
+    if num_bootstraps == 0:
+        raxml_call= '{} -p {} -m {} -n {} -s {} -w {}'.format(program, bootstrap_seed, model, run_name, pep_msa_phy, workdir)
+    else:
+        raxml_call = '{} -m {} -T {} -n {} -s {} -b {} -N {} -w {}'.\
+            format(program, model, num_cpu, run_name, pep_msa_phy,
+                   bootstrap_seed, num_bootstraps, workdir)
     #todo raxml might have different names on other systems
     print(raxml_call)
     p = subprocess.Popen(raxml_call, shell=True,
@@ -134,30 +140,31 @@ def run_raxml(program = None, pep_msa=None, outdir=None, model=None,
     p_out, p_err = p.communicate()
     print(p_err)
     print(p_out)
-    #todo nr bootstraps etc
     retval = p.wait()
     if retval != 0:
         raise PipelineException
     else:
-        #todo mv bootstrap tree to .bstree bstree
-        #todo majorityruleconsensus tree
-        bstree = os.path.join(workdir,"RAxML_bootstrap."+orthogroup)
-        mrc = orthogroup+".mrc"
-        # raxmlHPC -m $model -J MR -z RAxML_bootstrap.run.$nm -n $short
-        raxml_call_consensus = '{} -m {} -J MR -z {} -n {} -w {}'.format(program, model, bstree, mrc, workdir)
-        p = subprocess.Popen(raxml_call_consensus,
-                             shell=True,
-                             stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
-        p_out, p_err = p.communicate()
-        print(p_out)
-        print(p_err)
-        retval = p.wait()
-        if retval != 0:
-            raise PipelineException
-        else:
-            #rename
+        if num_bootstraps == 0:
             return retval
+            #todo mv to mrc (even though its not an mrc)
+        else:
+            bstree = os.path.join(workdir,"RAxML_bootstrap."+orthogroup)
+            mrc = orthogroup+".mrc"
+            # raxmlHPC -m $model -J MR -z RAxML_bootstrap.run.$nm -n $short
+            raxml_call_consensus = '{} -m {} -J MR -z {} -n {} -w {}'.format(program, model, bstree, mrc, workdir)
+            p = subprocess.Popen(raxml_call_consensus,
+                                 shell=True,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE)
+            p_out, p_err = p.communicate()
+            print(p_out)
+            print(p_err)
+            retval = p.wait()
+            if retval != 0:
+                raise PipelineException
+            else:
+                #rename
+                return retval
 
 @db_logger
 def run_ctl_maker(paml_file=None, tree_file=None,model="Ah0,Ah1",outfile=None,
@@ -212,15 +219,10 @@ def run_pysickle(program=None, dir=None, suffix=".msa",outdir=None,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
     p_out, p_err = p.communicate()
-    print(p_out)
-    print(p_err)
+    #print(p_out)
+    #print(p_err)
     retval = p.wait()
     if retval != 0:
         raise PipelineException
     else:
         return retval
-#origWD = os.getcwd() # remember our original working directory
-#os.chdir(os.path.join(os.path.abspath(sys.path[0]), relPathToLaunch))
-#subprocess.POPEN("usr/bin/perl ./file1.pl")
-#[...]
-#os.chdir(origWD) # get back to our original working directory
