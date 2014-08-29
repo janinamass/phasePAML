@@ -21,6 +21,7 @@ def db_logger(f):
     def wrapper(*args, **kwargs):
         db = kwargs.get("db")
         run_id = kwargs.get("run_id")
+        print("WRAPPER runid", run_id)
         if not run_id:
             run_id = "NULL"
         phase = kwargs.get("phase")
@@ -41,7 +42,7 @@ def db_logger(f):
             except PipelineException as e:
                 sys.stderr.write(str(e))
                 status = "f"  # fail
-            cmd = 'INSERT INTO phase (orthogroup, phase, status) VALUES ({},{},{})'.format(q(orthogroup), phase,
+            cmd = 'INSERT INTO phase (run_id, orthogroup, phase, status) VALUES ({},{},{},{})'.format(run_id, q(orthogroup), phase,
                                                                                            q(status))
 
             print("phase {} done.\n".format(str(phase)))
