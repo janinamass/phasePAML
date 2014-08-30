@@ -405,6 +405,7 @@ def main():
     #validate input folder, pep and nuc files need to match
 
     db = CONF["Directories"]["db_name"]
+    db = os.path.join(output_dir, db)
     path_dct = set_path_dct(output_dir, name=name)
     if phase == 0:
         try:
@@ -427,7 +428,7 @@ def main():
             orthogroup_dct = check_fasta(dir=os.path.join(output_dir, name), fix=True, path_dct=path_dct)
         except DifferentSequenceLengthsException as e:
             print(e)
-        print(db_check_run(os.path.join(output_dir, db), run_name=name, orthogroup_dct=orthogroup_dct))
+        print(db_check_run(db, run_name=name, orthogroup_dct=orthogroup_dct))
         phase = 1
     run_id = db_get_run_id(db, run_name=name)
     if not run_id:

@@ -32,7 +32,7 @@ def db_logger(f):
             cur = connection.cursor()
             cmd = 'INSERT INTO phase (run_id, orthogroup, phase, status) VALUES ({},{},{},{})'.format(run_id, q(orthogroup), phase,
                                                                                            q(status))
-            print(cmd)
+            print(cmd, db)
             cur.execute(cmd)
             connection.commit()
             try:
