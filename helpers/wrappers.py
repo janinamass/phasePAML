@@ -168,7 +168,7 @@ def run_raxml(program = None, pep_msa=None, outdir=None, model=None,
                 return retval
 
 @db_logger
-def run_ctl_maker(paml_file=None, tree_file=None,model="Ah0,Ah1",outfile=None,
+def run_ctl_maker(paml_file=None, tree_file=None,model="Ah0,Ah1", outfile=None,
                 regex=None, depth=4,
                 semaphore=None, db=None,
                 orthogroup=None, run_id=None,
@@ -178,6 +178,7 @@ def run_ctl_maker(paml_file=None, tree_file=None,model="Ah0,Ah1",outfile=None,
     except Exception as e:
         print(e)
         raise PipelineException
+    return 0
     #todo unlabeled tree from tree_file
 #readtree
 #labelForPamlRegex(unlabelledTree, regex, tree)
@@ -189,7 +190,7 @@ def run_ctl_maker(paml_file=None, tree_file=None,model="Ah0,Ah1",outfile=None,
 
 @db_logger
 def run_codeml(program=None, ctl_file=None, work_dir=None,
-               db=None, orthogroup=None,
+               db=None, orthogroup = None,
                run_id=None, phase=None, semaphore=None):
     codeml_call = '{} {}'.format(program, ctl_file)
     orig_wd = os.getcwd()

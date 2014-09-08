@@ -78,12 +78,15 @@ def init_phasetable(connection, run_id, orthogroup_list):
           'FOREIGN KEY(orthogroup) REFERENCES orthoinfo(orthogroup)' \
           ');'
     cur = connection.cursor()
-    cur.execute(cmd)
-    print("phase table created.\n")
+    try:
+        cur.execute(cmd)
+        print("phase table created.\n")
     # status
     # f: failed
     # r: running
     # s: success
+    except sqlite3.OperationalError as e:
+        print("phase table already existed.\n")
     cmdf = lambda runid, phase, orthogroup, status: \
         'INSERT INTO phase(run_id, phase, orthogroup, status)' \
         ' VALUES ({},{},{},{})'.format(runid, phase, orthogroup, status)
@@ -126,9 +129,13 @@ def init_orthoinfotable(connection, run_id, orthogroup_dct):
           'PRIMARY KEY(run_id, orthogroup)' \
           ');'
     cur = connection.cursor()
-    cur.execute(cmd)
-    print("orthoinfo table created.\n")
-    connection.commit()
+    try:
+        cur.execute(cmd)
+        print("orthoinfo table created.\n")
+        connection.commit()
+    except sqlite3.OperationalError as e:
+        print("orthoinfo table already existed.\n")
+
     cmdf = lambda runid, orthgroup, headers: \
         'INSERT INTO orthoinfo(run_id, orthogroup, headers)' \
         ' VALUES ({},{},{})'.format(runid, orthgroup, headers)
