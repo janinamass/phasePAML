@@ -8,6 +8,7 @@ from fastahelper import FastaParser
 from mfa2phy import mfa2phy
 from tree_labeler import make_ctl_tree
 from codeml_summary import calculatePvalue, CODEMLParser
+from map_back import map_back
 
 class PipelineException(Exception):
     pass
@@ -114,7 +115,8 @@ def run_pal2nal(program = None, pep_msa=None, outfile=None,
         if retval != 0:
             raise PipelineException
         elif p_err != "":
-            raise PipelineException
+            sys.stderr.write(p_err)
+            return retval
         else:
 
             return retval
@@ -235,6 +237,7 @@ def run_codeml_summary(h0=None, h1=None, db=None, outfile_prefix=None, orthogrou
                run_id=None, phase=None):
     try:
         pval = calculatePvalue(h0, h1)
+        pval = str(pval["tablerow"])
         cp = CODEMLParser()
         sitesNEB = cp.getPositiveSitesNEB(h1)
         sitesBEB = cp.getPositiveSitesBEB(h1)
@@ -243,10 +246,23 @@ def run_codeml_summary(h0=None, h1=None, db=None, outfile_prefix=None, orthogrou
         with open(outfile_prefix+"_summary.csv",'a') as out:
             out.write(pval)
         with open(outfile_prefix+orthogroup+".neb", 'a') as out:
-            out.write(sitesNEB)
-        with open(outfile_prefix+out+".beb", 'a') as out:
-            out.write(sitesBEB)
+            out.write("{}\n{}".format(str(sitesNEB["table"]), str(sitesNEB["significant"])))
+        with open(outfile_prefix+orthogroup+".beb", 'a') as out:
+            out.write("{}\n{}".format(str(sitesBEB["table"]), str(sitesBEB["significant"])))
 
-    except Exception:
+    except Exception as e:
+        print(e)
         raise PipelineException
     return 0
+
+
+@db_logger
+def run_map_back(gapped_alignment_file, list_of_positions, db=None, orthogroup=None, run_id=None, phase=None):
+    try:
+        retval = map_back(gappedAlignmentFile=gapped_alignment_file, listOfPositions=list_of_positions)
+    except Exception:
+        raise PipelineException
+    if retval != 0:
+        raise PipelineException
+    else:
+        return retval
