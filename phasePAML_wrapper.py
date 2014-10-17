@@ -580,7 +580,8 @@ def main():
                 pairs[os.path.join(path_dct['results'],codeml_file)] = os.path.join(path_dct['results'], codeml_file.split(".Ah0")[0]+".Ah1")
             #todo other models
         for k, v in pairs.items():
-            orthogroup=k.split(".")[0] #todo indiv. names for each branch
+            print("k: {} v:{}".format(k,v))
+            orthogroup=os.path.basename(k.split(".")[0]) #todo indiv. names for each branch
 
             run_codeml_summary(h0=k, h1=v, db=db, outfile_prefix=os.path.join(path_dct['results'], "result_"), orthogroup=orthogroup, run_id=run_id, phase=7)
 
