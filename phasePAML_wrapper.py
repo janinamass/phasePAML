@@ -12,7 +12,7 @@ import ConfigParser
 from helpers.fastahelper import FastaParser
 from helpers.dbhelper import db_check_run
 from helpers.dbhelper import db_get_run_id
-from helpers.wrappers import run_prank, run_pal2nal, run_raxml, run_ctl_maker, run_codeml, run_pysickle
+from helpers.wrappers import run_prank, run_pal2nal, run_raxml, run_ctl_maker, run_codeml, run_seqSieve
 from helpers.wrappers import run_codeml_summary
 
 class DirectoryExistsException(Exception):
@@ -37,8 +37,8 @@ CONF['Directories']['db_name'] = 'phasePAML.db'
 CONF['Directories']['input_dir'] = None
 CONF['Directories']['output_dir'] = None
 CONF['Directories']['name'] = "{:%B_%d_%Y_%H%M}".format(datetime.datetime.now())
-CONF['Pysickle'] = {}
-CONF['Pysickle']['threshold'] = 9999
+CONF['seqSieve'] = {}
+CONF['seqSieve']['threshold'] = 9999
 CONF['RAxML'] = {}
 CONF['RAxML']['num_bootstraps'] = 100
 CONF['RAxML']['model'] = 'PROTGAMMAJTT'
@@ -53,7 +53,7 @@ CONF['Paths']['prank'] = 'prank'
 CONF['Paths']['raxml'] = 'raxmlHPC'
 CONF['Paths']['pal2nal'] = 'pal2nal'
 CONF['Paths']['codeml'] = 'codeml'
-CONF['Paths']['pysickle'] = 'pysickle'
+CONF['Paths']['seqSieve'] = 'seqSieve'
 ####################################################
 
 
@@ -66,7 +66,7 @@ def get_config(configfile):
         for option in options:
             try:
                 CONF[section][option] = config.get(section, option)
-            except TypeError as e:
+            except TypeError:
                 CONF[section] = {}
                 CONF[section][option] = config.get(section, option)
 
@@ -89,8 +89,8 @@ def usage():
 
     -o, --output_dir=DIR            DIR is where your phasePAML_run folder will be created
     -n, --name=NAME *date           identifier for the run (directory suffix, table name)
-    -t, --pysickle_threshold        minimum length for paml alignment (no gaps) to pass
-                                    without triggering pysickle
+    -t, --seqSieve_threshold        minimum length for paml alignment (no gaps) to pass
+                                    without triggering seqSieve
 
     -b, --num_bootstraps=INT [1000]  number of bootstraps (for RAxML runs)
     -r, --regex=REGEX               regular expression to detect nodes in the trees
@@ -261,11 +261,11 @@ def set_path_dct(output_dir, name):
     phase_3 = os.path.join(base_path, "tree")
     phase_5 = os.path.join(base_path, "codeml")
     phase_6 = os.path.join(base_path, "results")
-    pysickle = os.path.join(base_path, "pysickle")
+    seqSieve = os.path.join(base_path, "seqSieve")
     for i in [phase_0faulty_nuc, phase_0faulty_pep,
               phase_0nuc, phase_0pep, phase_1,
               phase_2, phase_3, phase_5,
-              phase_6,pysickle]:
+              phase_6,seqSieve]:
         path_dct[os.path.basename(i)] = i
     return path_dct
 
@@ -281,10 +281,10 @@ def make_folder_skeleton(output_dir, name):
     phase_3 = os.path.join(base_path, "tree")
     phase_5 = os.path.join(base_path, "codeml")
     phase_6 = os.path.join(base_path, "results")
-    pysickle = os.path.join(base_path, "pysickle")
+    seqSieve = os.path.join(base_path, "seqSieve")
     if not os.path.exists(base_path):
         os.makedirs(base_path)
-        for i in [phase_0faulty_nuc, phase_0faulty_pep, phase_0nuc, phase_0pep, phase_1, phase_2, phase_3, phase_5, phase_6, pysickle]:
+        for i in [phase_0faulty_nuc, phase_0faulty_pep, phase_0nuc, phase_0pep, phase_1, phase_2, phase_3, phase_5, phase_6, seqSieve]:
             os.makedirs(i)
     else:
         raise DirectoryExistsException("{} already exists.".format(base_path))
@@ -322,7 +322,7 @@ def main():
                 'output_dir=',
                 'name=',
                 'num_bootstraps=',
-                'pysickle_threshold='
+                'seqSieve_threshold='
                 'raxml_model='
                 'regex=',
                 'labeling_level=',
@@ -335,7 +335,7 @@ def main():
             ]
         )
     except getopt.GetoptError as err:
-        print (str(err))
+        print(str(err))
         usage()
 
     for o, a in opts: #config first
@@ -352,8 +352,8 @@ def main():
             print(CONF['Directories'])
         elif o in ("-n", "--name"):
             CONF['Directories']['name'] = a
-        elif o in ("-t", "--pysickle_threshold"):
-            CONF['Pysickle']['threshold'] = a
+        elif o in ("-t", "--seqSieve_threshold"):
+            CONF['seqSieve']['threshold'] = a
         elif o in ("-b", "--num_bootstraps"):
             CONF['RAxML']['num_bootstraps'] = a
         elif o in ("-x", "--raxml_model"):
@@ -490,30 +490,30 @@ def main():
         for pamlfile in os.listdir(path_dct["MSA_nuc"]):
             if pamlfile.endswith(".paml"):
                 shutil.copy(os.path.join(path_dct["MSA_nuc"], pamlfile), os.path.join(path_dct["codeml"], pamlfile))
-                #check if the files are min length, copy pep msa file to pysickle if they're not
-                if not is_min_length_paml_msa(os.path.join(path_dct["MSA_nuc"], pamlfile), min_length=int(CONF['Pysickle']['threshold'])):
+                #check if the files are min length, copy pep msa file to seqSieve if they're not
+                if not is_min_length_paml_msa(os.path.join(path_dct["MSA_nuc"], pamlfile), min_length=int(CONF['seqSieve']['threshold'])):
                     #todo fix qnd hack
                     orthogroup = pamlfile.split(".")[0]
-                    shutil.copy(os.path.join(path_dct["MSA_pep"], orthogroup+".msa"), os.path.join(path_dct["pysickle"], orthogroup+".msa"))
+                    shutil.copy(os.path.join(path_dct["MSA_pep"], orthogroup+".msa"), os.path.join(path_dct["seqSieve"], orthogroup+".msa"))
                     nuc = [n for n in os.listdir(path_dct["nuc"]) if n.split(".")[0] == orthogroup][0]
-                    shutil.copy(os.path.join(path_dct["nuc"], nuc), os.path.join(path_dct["pysickle"], nuc))
+                    shutil.copy(os.path.join(path_dct["nuc"], nuc), os.path.join(path_dct["seqSieve"], nuc))
                     #todo if pysickle
-        pysickle=True
-        if pysickle:
-            print("running pysickle")
-            run_pysickle(program=CONF['Paths']['pysickle'], dir=path_dct["pysickle"], db=db,orthogroup="__pysickle__",run_id=run_id,phase=999)
-            for pysickled in os.listdir(os.path.join(path_dct["pysickle"], "ps_out_si")):
-                if pysickled.endswith(".tmp"):#marks new pep.fa
-                    print(pysickled)
-                    new_name = pysickled.replace(".", "_").replace("_tmp", ".fa")
-                    print(new_name, "new name", "infile:", os.path.join(path_dct["pysickle"],"ps_out_si", new_name))
-                    run_prank(program=CONF['Paths']['prank'],infile=os.path.join(path_dct["pysickle"],"ps_out_si", pysickled),
+        use_seqsieve = True
+        if use_seqsieve:
+            print("running seqSieve")
+            run_seqSieve(program=CONF['Paths']['seqSieve'], dir=path_dct["seqSieve"], db=db,orthogroup="__seqSieve__",run_id=run_id,phase=999)
+            for seqSieved in os.listdir(os.path.join(path_dct["seqSieve"], "sqs_out_si")):
+                if seqSieved.endswith(".fa") and not seqSieved.endswith("_aln.fa"): #(".tmp"):#marks new pep.fa
+                    print(seqSieved)
+                    new_name = seqSieved.replace(".", "_") #.replace("_tmp", ".fa")
+                    print(new_name, "new name", "infile:", os.path.join(path_dct["seqSieve"],"sqs_out_si", new_name))
+                    run_prank(program=CONF['Paths']['prank'],infile=os.path.join(path_dct["seqSieve"],"sqs_out_si", seqSieved),
                               outfile= os.path.join(path_dct["MSA_pep"], new_name.split(".")[0]+".msa"),
                               cpu=1, db=db,
                               orthogroup=new_name.split(".")[0], run_id=run_id,
                               phase=99)
                     #nwo we still need the new nuc
-                    nucfa = [n for n in os.listdir(path_dct["nuc"]) if n.split(".")[0] == pysickled.split(".")[0]][0]
+                    nucfa = [n for n in os.listdir(path_dct["nuc"]) if n.split(".")[0] == seqSieved.split("_")[0]][0]
                     orthogroup=new_name.split(".")[0]
                     outfile = os.path.join(path_dct["MSA_nuc"], orthogroup+".msa")
                     run_pal2nal(program=CONF['Paths']['pal2nal'], pep_msa=os.path.join(path_dct["MSA_pep"], new_name.split(".")[0]+".msa"),

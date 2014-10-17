@@ -8,7 +8,7 @@ from fastahelper import FastaParser
 from mfa2phy import mfa2phy
 from tree_labeler import make_ctl_tree
 from codeml_summary import calculatePvalue, CODEMLParser
-from map_back import map_back
+#from helpers.map_back import map_back
 
 class PipelineException(Exception):
     pass
@@ -214,11 +214,11 @@ def run_codeml(program=None, ctl_file=None, work_dir=None,
 
 
 @db_logger
-def run_pysickle(program=None, dir=None, suffix=".msa",outdir=None,
+def run_seqSieve(program=None, dir=None, suffix=".msa",outdir=None,
                db=None, orthogroup=None,
                run_id=None, phase=None, semaphore=None):
-    pysickle_call = 'pysickle.py -F {} -s {}'.format(dir, suffix)
-    p = subprocess.Popen(pysickle_call,
+    seqSieve_call = 'seqSieve -F {} -s {}'.format(dir, suffix)
+    p = subprocess.Popen(seqSieve_call,
                              shell=True,
                              stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
