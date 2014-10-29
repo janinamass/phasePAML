@@ -567,7 +567,7 @@ def main():
         phase = 6
     if phase == 6:
         for codeml_file in os.listdir(path_dct['codeml']):
-            known_suffixes=["Ah0","Ah1","BM","M0","M1","M1a","M2",
+            known_suffixes = ["Ah0","Ah1","BM","M0","M1","M1a","M2",
                             "M2a","M7","M8","M8a"]
             if codeml_file.split(".")[-1] in known_suffixes:
                 print(codeml_file)
@@ -577,13 +577,14 @@ def main():
         for codeml_file in os.listdir(path_dct['results']):
             if codeml_file.endswith("Ah0"):
                 #h0:h1
-                pairs[os.path.join(path_dct['results'],codeml_file)] = os.path.join(path_dct['results'], codeml_file.split(".Ah0")[0]+".Ah1")
+                pairs[os.path.join(path_dct['results'], codeml_file)] = os.path.join(path_dct['results'], codeml_file.split(".Ah0")[0]+".Ah1")
             #todo other models
         for k, v in pairs.items():
-            print("k: {} v:{}".format(k,v))
-            orthogroup=os.path.basename(k.split(".")[0]) #todo indiv. names for each branch
+            print("k: {} v:{}".format(k, v))
+            orthogroup = os.path.basename(k.split(".")[0]) #todo indiv. names for each branch
 
-            run_codeml_summary(h0=k, h1=v, db=db, outfile_prefix=os.path.join(path_dct['results'], "result_"), orthogroup=orthogroup, run_id=run_id, phase=7)
+            run_codeml_summary(h0=k, h1=v, db=db, outfile_prefix=os.path.join(path_dct['results'], "result_"),
+                               orthogroup=orthogroup, run_id=run_id, phase=7)
 
 
         #cp to results folder
