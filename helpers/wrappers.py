@@ -101,16 +101,16 @@ def run_pal2nal(program = None, pep_msa=None, outfile=None,
                          stderr=subprocess.PIPE)
     p_out, p_err = p.communicate()
     #todo log errors
-    print(p_out, p_err)
+    print(p_out, p_err, "PAML",'{} {} {} -output paml -nogap > {} '.format(program, pep_msa, pal2nal_nuc_in, paml) )
     retval = p.wait()
     if retval != 0:
         raise PipelineException
     else:
-        p = subprocess.Popen('pal2nal.pl {} {} -output paml > {} '.format(pep_msa, pal2nal_nuc_in, pamlg),
+        p = subprocess.Popen('{} {} {} -output paml > {} '.format(program, pep_msa, pal2nal_nuc_in, pamlg),
                              shell=True, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
         p_out, p_err = p.communicate()
-        #print(p_out, p_err)
+        print(p_out, p_err, "PAMLG", '{} {} {} -output paml > {} '.format(program, pep_msa, pal2nal_nuc_in, pamlg))
         retval = p.wait()
         if retval != 0:
             raise PipelineException
