@@ -322,11 +322,10 @@ def label_regex(unlabeled_tree, regex, treefile, depth=4,
             n = node
             try:
                 for i in range(0, depth):
-                    n = n.up
                     n.set_style(nsFG[i])
                     marks.append("#" + str(count))
                     #print(count)
-                    t.mark_tree([str(count)], marks=marks)
+                    t.mark_tree([str(n.node_id)], marks=marks)
                     #just label everything with #1
                     tolabelreg.append(str(n.node_id))
 
@@ -334,11 +333,13 @@ def label_regex(unlabeled_tree, regex, treefile, depth=4,
                     with open(outfile, 'w') as out:
                         out.write(t.write())
                     outfiles.append(outfile)
-
+                    n=n.up
             except AttributeError:
                 pass
         else:
             node.set_style(nsBG)
+
+
     for f in tolabelreg:
         print(f,"FFF")
         for m in model_list:
