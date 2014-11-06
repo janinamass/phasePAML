@@ -8,6 +8,7 @@ from ete2 import TreeStyle
 from ete2 import NodeStyle
 from ete2 import TextFace
 import os
+import copy
 
 def ctlTemplate(seqfile=None, treefile=None, outfile=None, runmode="0", \
                 seqtype="1", model=None, fix_kappa="0", kappa="2", \
@@ -323,17 +324,26 @@ def label_regex(unlabeled_tree, regex, treefile, depth=4,
             try:
                 for i in range(0, depth):
                     n.set_style(nsFG[i])
-                    marks.append("#" + str(count))
+                    marks = []
+                    #marks.append("#" + str(count))
+
+                    marks.append("#" + str(1))
+                    backup_of_t = copy.deepcopy(t)
+                    print("BACKUP", backup_of_t.write())
                     #print(count)
-                    t.mark_tree([str(n.node_id)], marks=marks)
+                    t.mark_tree([n.node_id], marks=marks)
+
+                    print(t.write())
                     #just label everything with #1
                     tolabelreg.append(str(n.node_id))
-
+                    count += 1
                     outfile = treefile + "." + "_".join([str(n.node_id)])
                     with open(outfile, 'w') as out:
                         out.write(t.write())
                     outfiles.append(outfile)
                     n=n.up
+                    #restore
+                    t = copy.deepcopy(backup_of_t)
             except AttributeError:
                 pass
         else:
