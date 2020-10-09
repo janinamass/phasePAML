@@ -1,7 +1,7 @@
 __author__ = 'jmass'
 
 import sys
-from fastahelper import FastaParser
+from .fastahelper import FastaParser
 
 
 def mfa2phy(mfa_in=None, phy_out=None):

@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 __author__ = 'jmass'
-__version__ = '0.1'
+__version__ = '0.2'
 
 import sys
 import getopt
@@ -8,7 +8,8 @@ import datetime
 import os
 import os.path
 import shutil
-import ConfigParser
+import configparser
+from PyQt5 import QtGui
 from helpers.fastahelper import FastaParser
 from helpers.dbhelper import db_check_run
 from helpers.dbhelper import db_get_run_id
@@ -59,7 +60,7 @@ CONF['Paths']['seqSieve'] = 'seqSieve'
 
 def get_config(configfile):
     global CONF
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(configfile)
     for section in config.sections():
         options = config.options(section)
@@ -138,7 +139,7 @@ def show_phase_help():
     # 1             MSA              prank
     # 2             nucMSA           pal2nal
     # 3             tree             RAxML
-    # 4             tree labeling    ete2
+    # 4             tree labeling    ete3
     # 5             select.analysis  codeml (PAML)
     # 6             summarize        result from phase 4 for all files
     ###################################################################

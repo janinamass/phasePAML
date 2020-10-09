@@ -3,11 +3,11 @@ import os
 import getopt
 import sys
 import os.path
-from ete2 import Tree
-from ete2 import EvolTree
-from ete2 import TreeStyle
-from ete2 import NodeStyle
-from ete2 import TextFace
+from ete3 import Tree
+from ete3 import EvolTree
+from ete3 import TreeStyle
+from ete3 import NodeStyle
+from ete3 import TextFace
 import re
 import random
 

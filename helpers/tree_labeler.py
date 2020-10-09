@@ -2,11 +2,11 @@
 import sys
 import re
 
-from ete2 import Tree
-from ete2 import EvolTree
-from ete2 import TreeStyle
-from ete2 import NodeStyle
-from ete2 import TextFace
+from ete3 import Tree
+from ete3 import EvolTree
+from ete3 import TreeStyle
+from ete3 import NodeStyle
+from ete3 import TextFace
 import os
 import copy
 
@@ -254,7 +254,9 @@ def fakeUnroot(tree, bgcolor="white"):
 
 
 def read_tree(tree):
-    t = Tree(tree)
+    #t = Tree(tree)
+    nw = re.sub(":(\d+\.\d+)\[(\d+)\]", ":\\1[&&NHX:support=\\2]", open(tree).read())
+    t = Tree(nw)
     for node in t.traverse():
         if node.name.startswith("""'"""):
             node.name = node.name.replace("""'""", "")

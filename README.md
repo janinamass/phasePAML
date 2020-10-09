@@ -6,17 +6,20 @@ phasePAML
 
 additionally needs (python): 
 
-    sudo apt-get install python-qt4
-    pip install ete2 
-    pip install matplotlib
-    pip install numpy
-    pip install seqsieve -i https://testpypi.python.org/pypi
-    
+    # python3 -m venv env
+    # source env/bin/activate
+    (env) pip install ete3 
+    (env) pip install matplotlib
+    (env) pip install numpy
+    (env) pip install seqsieve 
+    (env) pip install PyQt5
+    (env) pip install scipy
 external:
 
      - pal2nal
      - prank
      - raxml
+     - paml
     
 run with:
 

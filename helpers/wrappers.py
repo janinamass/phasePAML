@@ -4,11 +4,11 @@ import sys
 import subprocess
 import shutil
 import os
-from fastahelper import FastaParser
-from mfa2phy import mfa2phy
-from tree_labeler import make_ctl_tree
-from codeml_summary import calculatePvalue, CODEMLParser
-#from helpers.map_back import map_back
+from .fastahelper import FastaParser
+from .mfa2phy import mfa2phy
+from .tree_labeler import make_ctl_tree
+from .codeml_summary import calculatePvalue, CODEMLParser
+from .map_back import main as map_back
 
 class PipelineException(Exception):
     pass
@@ -115,7 +115,7 @@ def run_pal2nal(program = None, pep_msa=None, outfile=None,
         if retval != 0:
             raise PipelineException
         elif p_err != "":
-            sys.stderr.write(p_err)
+            sys.stderr.write(str(p_err))
             return retval
         else:
 
