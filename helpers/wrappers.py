@@ -132,9 +132,9 @@ def run_raxml(program = None, pep_msa=None, outdir=None, model=None,
     if num_bootstraps == 0:
         raxml_call= '{} -p {} -m {} -n {} -s {} -w {}'.format(program, bootstrap_seed, model, run_name, pep_msa_phy, workdir)
     else:
-        raxml_call = '{} -m {} -T {} -n {} -s {} -b {} -N {} -w {}'.\
+        raxml_call = '{} -m {} -T {} -n {} -s {} -b {} -N {} -w {} -p {}'.\
             format(program, model, num_cpu, run_name, pep_msa_phy,
-                   bootstrap_seed, num_bootstraps, workdir)
+                   bootstrap_seed, num_bootstraps, workdir, 1234)
     #todo raxml might have different names on other systems
     print(raxml_call)
     p = subprocess.Popen(raxml_call, shell=True,

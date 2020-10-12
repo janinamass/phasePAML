@@ -465,14 +465,14 @@ def main():
         for f in os.listdir(path_dct["MSA_pep"]):
             if f.endswith(".msa"): #ignore .reduced
                 msa_file = os.path.join(path_dct["MSA_pep"], f)
-            nucfile = [os.path.join(path_dct["nuc"], n) for n in nucfiles if n.split(".")[0] == f.split(".")[0]]
-            if len(nucfile) > 1:
-                sys.stderr.write("Sth wrong with your fasta files,"
-                                " got multiple matches for {}".format(f.split(".")[0]))
-                sys.exit(1)
-            else:
-                nucfile = nucfile[0]
-                nuc_msa_dct[nucfile] = msa_file
+                nucfile = [os.path.join(path_dct["nuc"], n) for n in nucfiles if n.split(".")[0] == f.split(".")[0]]
+                if len(nucfile) > 1:
+                    sys.stderr.write("Sth wrong with your fasta files,"
+                                    " got multiple matches for {}".format(f.split(".")[0]))
+                    sys.exit(1)
+                else:
+                    nucfile = nucfile[0]
+                    nuc_msa_dct[nucfile] = msa_file
         #only pass if all files have a match
         for nuc_fa, pep_msa in nuc_msa_dct.items():
             orthogroup = os.path.basename(pep_msa).split(".")[0]
